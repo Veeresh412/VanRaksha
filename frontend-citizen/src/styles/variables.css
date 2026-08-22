@@ -1,0 +1,83 @@
+:root {
+  /* Brand */
+  --color-primary: #1a4d3e;
+  --color-primary-dark: #143d31;
+  --color-primary-light: #2a6b58;
+
+  /* Backgrounds */
+  --color-bg: #f4f2ed;
+  --color-bg-warm: #ebe8e2;
+  --color-surface: #ffffff;
+  --color-surface-muted: #faf9f7;
+
+  /* Text */
+  --color-text: #1c1c1c;
+  --color-text-secondary: #5c5c5c;
+  --color-text-muted: #8a8a8a;
+  --color-text-inverse: #ffffff;
+
+  /* Borders */
+  --color-border: #e0ddd6;
+  --color-border-light: #eceae4;
+
+  /* Status */
+  --color-status-processing-bg: #fef9e7;
+  --color-status-processing-text: #92680a;
+  --color-status-processing-border: #f5e6a3;
+
+  --color-status-review-bg: #edf7f0;
+  --color-status-review-text: #2d6a4f;
+  --color-status-review-border: #c8e6d0;
+
+  --color-status-submitted-bg: #eef4fb;
+  --color-status-submitted-text: #2563a8;
+  --color-status-submitted-border: #c5daf0;
+
+  --color-status-resolved-bg: #e8f5ec;
+  --color-status-resolved-text: #1a6b3c;
+  --color-status-resolved-border: #a8d5b5;
+
+  --color-verified-bg: #edf7f0;
+  --color-verified-text: #2d6a4f;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 20px;
+  --space-2xl: 24px;
+  --space-3xl: 32px;
+
+  /* Layout */
+  --app-max-width: 480px;
+  --header-height: 56px;
+  --bottom-nav-height: 64px;
+  --bottom-nav-fab-size: 56px;
+  --bottom-nav-fab-overlap: 28px;
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* Typography */
+  --font-family: 'Noto Sans Devanagari', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.8125rem;
+  --font-size-base: 0.9375rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+}

@@ -1,0 +1,103 @@
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+
+.input-group__label {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.input-group__wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-group__icon {
+  position: absolute;
+  left: 14px;
+  color: var(--color-text-muted);
+  pointer-events: none;
+  display: flex;
+}
+
+.input-group__field {
+  width: 100%;
+  padding: 12px 14px 12px 44px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  min-height: 48px;
+  transition: border-color var(--transition-fast);
+}
+
+.input-group__field--no-icon {
+  padding-left: 14px;
+}
+
+.input-group__field:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.input-group__field::placeholder {
+  color: var(--color-text-muted);
+}
+
+.input-group__toggle {
+  position: absolute;
+  right: 12px;
+  color: var(--color-text-muted);
+  padding: 4px;
+  display: flex;
+}
+
+.input-group__error {
+  font-size: var(--font-size-xs);
+  color: #b91c1c;
+}
+
+.input-group__textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  min-height: 120px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.input-group__textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.input-group__field--select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238a8a8a' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 40px;
+}
+
+.input-group__field--error {
+  border-color: #b91c1c;
+}
+
+.input-group__field--error:focus {
+  border-color: #b91c1c;
+}
+
+.input-group__counter {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  text-align: right;
+  margin-top: var(--space-xs);
+}
