@@ -2,18 +2,20 @@ import { Maximize2 } from 'lucide-react'
 import { Pie, PieChart, ResponsiveContainer, Cell, Tooltip } from 'recharts'
 
 const colors = {
-  verified: '#2E9B5F',
-  under_review: '#F59E0B',
-  rejected: '#74838A',
-  unverified: '#E5534B',
+  Verified: '#2E9B5F',
+  'Under Review': '#F59E0B',
+  Rejected: '#74838A',
+  Unverified: '#E5534B',
+  Resolved: '#0F5E40',
 }
 
 function ResolutionDonutCard({ analytics, expanded = false, onExpand }) {
   const data = [
-    { name: 'Verified', key: 'verified', value: analytics.verified },
-    { name: 'Under Review', key: 'under_review', value: analytics.underReview },
-    { name: 'Rejected', key: 'rejected', value: analytics.rejected },
-    { name: 'Unverified', key: 'unverified', value: analytics.unverified },
+    { name: 'Verified', key: 'Verified', value: analytics.verified },
+    { name: 'Under Review', key: 'Under Review', value: analytics.underReview },
+    { name: 'Rejected', key: 'Rejected', value: analytics.rejected },
+    { name: 'Resolved', key: 'Resolved', value: analytics.resolved },
+    { name: 'Unverified', key: 'Unverified', value: analytics.unverified },
   ].filter((item) => item.value > 0)
 
   const total = data.reduce((sum, item) => sum + item.value, 0)

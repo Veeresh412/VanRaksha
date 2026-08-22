@@ -3,7 +3,7 @@ import { Satellite, UsersRound, Radar, CalendarClock } from 'lucide-react'
 function DataOverviewCard({ analytics }) {
   const rows = [
     {
-      label: 'Satellite Signals Processed',
+      label: 'Satellite Pings Processed',
       value: analytics.satelliteSignals,
       icon: Satellite,
     },

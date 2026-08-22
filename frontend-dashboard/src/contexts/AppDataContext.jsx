@@ -1,81 +1,248 @@
-import { createContext, useContext, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import {
   backtestEvents,
   citizenReporters,
   flags as seedFlags,
+  reports as seedReports,
+  satellitePings,
   jurisdictions,
   jurisdictionsById,
   seedData,
   demoUsers,
 } from '../data/seedData'
+import { useAuth } from './AuthContext'
+import { USE_SEED_DATA } from '../services/config'
+import { getFlags, patchFlag } from '../services/flags'
+import { getCitizenReports } from '../services/reports'
+import { clearTestData } from '../services/testing'
 
 const AppDataContext = createContext(null)
 
+const statusMap = {
+  unverified: 'Unverified',
+  under_review: 'Under Review',
+  verified: 'Verified',
+  rejected: 'Rejected',
+  resolved: 'Resolved',
+}
+
+const sourceMap = {
+  satellite: 'Satellite',
+  citizen_report: 'Citizen Report',
+  combined: 'Combined',
+}
+
+const signalTypeMap = {
+  vegetation_loss: 'Potential Vegetation Loss',
+  encroachment: 'Unverified Land-use Change',
+  structure_built: 'Potential Structure Change',
+}
+
+const corroborationStateMap = {
+  single_source: 'Single-source',
+  corroborated: 'Corroborated (2 reports)',
+  verified_fast_track: 'Tier 3 Fast-track',
+}
+
+const reporterTrustByTier = {
+  1: 'Anonymous / Basic Citizen',
+  2: 'Geo-verified / SMS-verified User',
+  3: 'Verified NGO / Forest Official',
+}
+
+function toCanonicalStatus(status) {
+  return statusMap[String(status ?? '').toLowerCase().replaceAll(' ', '_')] ?? status ?? 'Unverified'
+}
+
+function toCanonicalSource(source) {
+  return sourceMap[String(source ?? '').toLowerCase().replaceAll(' ', '_')] ?? source ?? 'Citizen Report'
+}
+
+function toCanonicalSignalType(source, signalType) {
+  const normalizedSignalType =
+    signalTypeMap[String(signalType ?? '').toLowerCase().replaceAll(' ', '_')] ?? signalType
+
+  if (normalizedSignalType) return normalizedSignalType
+  if (source === 'Citizen Report') return 'Citizen Observation'
+  return 'Unverified Land-use Change'
+}
+
+function toCanonicalCorroborationState(corroborationState) {
+  return (
+    corroborationStateMap[String(corroborationState ?? '').toLowerCase().replaceAll(' ', '_')] ??
+    corroborationState ??
+    null
+  )
+}
+
+function inferCorroborationState(flag) {
+  if (flag.source === 'Combined') return 'Corroborated (1 report + satellite)'
+  if (flag.source === 'Citizen Report' && flag.status === 'Verified') return 'Tier 3 Fast-track'
+  if (flag.source === 'Citizen Report' && flag.status === 'Under Review') return 'Corroborated (2 reports)'
+  return 'Single-source'
+}
+
+function inferCorroborationCount(corroborationState) {
+  if (
+    corroborationState === 'Corroborated (2 reports)' ||
+    corroborationState === 'Corroborated (1 report + satellite)'
+  ) {
+    return 2
+  }
+
+  return 1
+}
+
+function normalizeFlagRecord(flag, jurisdictionLookup) {
+  const source = toCanonicalSource(flag.source)
+  const status = toCanonicalStatus(flag.status)
+  const jurisdictionId = flag.jurisdiction_id ?? flag.jurisdictionId ?? null
+  const jurisdiction = jurisdictionId ? jurisdictionLookup[jurisdictionId] : null
+
+  const latitude = flag.latitude ?? flag.lat ?? jurisdiction?.latitude ?? null
+  const longitude = flag.longitude ?? flag.long ?? jurisdiction?.longitude ?? null
+
+  const signalType = toCanonicalSignalType(source, flag.signal_type ?? flag.change_type)
+  const createdAt = flag.created_at ?? flag.date_detected ?? null
+  const corroborationState =
+    toCanonicalCorroborationState(flag.corroboration_state) ??
+    inferCorroborationState({
+      source,
+      status,
+    })
+
+  const satelliteConfidence =
+    typeof flag.satellite_confidence === 'number'
+      ? flag.satellite_confidence
+      : typeof flag.confidence_score === 'number'
+        ? flag.confidence_score
+        : null
+
+  const officerNotes = flag.officer_notes ?? flag.officer_note ?? ''
+
+  return {
+    ...flag,
+    flag_id: flag.flag_id,
+    latitude,
+    longitude,
+    signal_type: signalType,
+    source,
+    status,
+    jurisdiction_id: jurisdictionId,
+    district: flag.district ?? jurisdiction?.district ?? null,
+    state: flag.state ?? jurisdiction?.state ?? null,
+    satellite_confidence: satelliteConfidence,
+    corroboration_state: corroborationState,
+    corroboration_count: flag.corroboration_count ?? inferCorroborationCount(corroborationState),
+    officer_notes: officerNotes,
+    created_at: createdAt,
+    lat: latitude,
+    long: longitude,
+    change_type: signalType,
+    confidence_score: satelliteConfidence,
+    date_detected: createdAt,
+    officer_note: officerNotes,
+    escalated: Boolean(flag.escalated),
+  }
+}
+
+function normalizeReportRecord(report, flagsById) {
+  const linkedFlagId = report.linked_flag_id ?? report.flag_id ?? null
+  const linkedFlag = linkedFlagId ? flagsById[linkedFlagId] : null
+
+  const tier = Number(report.tier ?? 1)
+  const status = toCanonicalStatus(report.status ?? linkedFlag?.status)
+
+  const latitude = report.latitude ?? report.lat ?? linkedFlag?.latitude ?? null
+  const longitude = report.longitude ?? report.long ?? linkedFlag?.longitude ?? null
+  const createdAt = report.created_at ?? report.submitted_at ?? linkedFlag?.created_at ?? null
+
+  const authenticityScore =
+    typeof report.authenticity_score === 'number'
+      ? report.authenticity_score
+      : typeof report.confidence_score === 'number'
+        ? report.confidence_score
+        : null
+
+  return {
+    ...report,
+    report_id: report.report_id,
+    photo_url: report.photo_url ?? null,
+    latitude,
+    longitude,
+    description: report.description ?? 'Citizen-submitted report',
+    tier,
+    reporter_trust: report.reporter_trust ?? reporterTrustByTier[tier] ?? reporterTrustByTier[1],
+    status,
+    authenticity_score: authenticityScore,
+    linked_flag_id: linkedFlagId,
+    jurisdiction_id: report.jurisdiction_id ?? linkedFlag?.jurisdiction_id ?? null,
+    created_at: createdAt,
+    flag_id: linkedFlagId,
+    submitted_at: createdAt,
+    confidence_score: authenticityScore,
+    lat: latitude,
+    long: longitude,
+  }
+}
+
 function deriveCorroborationState(flag) {
-  if (flag.source === 'citizen_report' && flag.status === 'verified') {
+  if (flag.source === 'Combined') {
     return {
-      corroboration_state: 'verified_fast_track',
+      corroboration_state: 'Corroborated (1 report + satellite)',
+      corroboration_count: 2,
+    }
+  }
+
+  if (flag.source === 'Citizen Report' && flag.status === 'Verified') {
+    return {
+      corroboration_state: 'Tier 3 Fast-track',
       corroboration_count: 1,
     }
   }
 
-  if (flag.status === 'under_review' || flag.status === 'verified') {
+  if (flag.source === 'Citizen Report' && flag.status === 'Under Review') {
     return {
-      corroboration_state: 'corroborated',
-      corroboration_count: Math.max(flag.corroboration_count ?? 2, 2),
+      corroboration_state: 'Corroborated (2 reports)',
+      corroboration_count: 2,
     }
   }
 
   return {
-    corroboration_state: 'single_source',
+    corroboration_state: 'Single-source',
     corroboration_count: 1,
   }
 }
 
-function deriveCitizenReports(flags) {
-  const citizenFlags = flags.filter((flag) => flag.source === 'citizen_report')
-
-  return citizenFlags.map((flag, index) => {
-    const reporter = citizenReporters[index % citizenReporters.length]
-    return {
-      report_id: `report_${flag.flag_id}`,
-      flag_id: flag.flag_id,
-      jurisdiction_id: flag.jurisdiction_id,
-      reporter_type: reporter.role,
-      reporter_label: reporter.name,
-      verified: reporter.verified,
-      submitted_at: flag.date_detected,
-      confidence_score: flag.confidence_score,
-      status: flag.status,
-      lat: flag.lat,
-      long: flag.long,
-    }
-  })
-}
-
-function buildAnalytics(flags) {
+function buildAnalytics(flags, reports, inferredPingCount) {
   const statusCount = flags.reduce(
     (accumulator, flag) => {
+      if (typeof accumulator[flag.status] !== 'number') {
+        accumulator[flag.status] = 0
+      }
+
       accumulator[flag.status] += 1
       return accumulator
     },
     {
-      unverified: 0,
-      under_review: 0,
-      verified: 0,
-      rejected: 0,
+      Unverified: 0,
+      'Under Review': 0,
+      Verified: 0,
+      Rejected: 0,
+      Resolved: 0,
     },
   )
 
   return {
     jurisdictionsMonitored: new Set(flags.map((flag) => flag.jurisdiction_id)).size,
     totalFlags: flags.length,
-    underReview: statusCount.under_review,
-    verified: statusCount.verified,
-    unverified: statusCount.unverified,
-    rejected: statusCount.rejected,
-    citizenReports: flags.filter((flag) => flag.source === 'citizen_report').length,
-    satelliteSignals: flags.filter((flag) => flag.source === 'satellite').length,
+    underReview: statusCount['Under Review'],
+    verified: statusCount.Verified,
+    unverified: statusCount.Unverified,
+    rejected: statusCount.Rejected,
+    resolved: statusCount.Resolved,
+    citizenReports: reports.length,
+    satelliteSignals: inferredPingCount,
   }
 }
 
@@ -92,39 +259,188 @@ function createOfficersFromUsers(users) {
   }))
 }
 
+function buildFlagsLookup(flags) {
+  return flags.reduce((accumulator, flag) => {
+    accumulator[flag.flag_id] = flag
+    return accumulator
+  }, {})
+}
+
+function extractRecord(payload) {
+  if (!payload || typeof payload !== 'object') return null
+  if (payload.data && typeof payload.data === 'object') return payload.data
+  if (payload.flag && typeof payload.flag === 'object') return payload.flag
+  return payload
+}
+
 export function AppDataProvider({ children }) {
+  const { session, isAuthenticated } = useAuth()
+  const accessToken = session?.access_token ?? null
+
   const [flags, setFlags] = useState(seedFlags)
+  const [reports, setReports] = useState(seedReports)
   const [officers, setOfficers] = useState(createOfficersFromUsers(demoUsers))
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [syncError, setSyncError] = useState('')
 
-  const updateFlagStatus = (flagId, nextStatus) => {
-    setFlags((currentFlags) =>
-      currentFlags.map((flag) => {
-        if (flag.flag_id !== flagId) return flag
+  const hydrateFromApi = useCallback(async () => {
+    if (USE_SEED_DATA || !accessToken) return
 
-        const updatedFlag = {
-          ...flag,
-          status: nextStatus,
-        }
+    setIsSyncing(true)
 
-        return {
-          ...updatedFlag,
-          ...deriveCorroborationState(updatedFlag),
-        }
-      }),
-    )
+    try {
+      const [flagRecords, reportRecords] = await Promise.all([
+        getFlags({
+          token: accessToken,
+          page: 1,
+          limit: 500,
+        }),
+        getCitizenReports({
+          token: accessToken,
+          page: 1,
+          limit: 500,
+        }),
+      ])
+
+      const normalizedFlags = flagRecords.map((flag) => normalizeFlagRecord(flag, jurisdictionsById))
+      const flagsById = buildFlagsLookup(normalizedFlags)
+      const normalizedReports = reportRecords.map((report) => normalizeReportRecord(report, flagsById))
+
+      setFlags(normalizedFlags)
+      setReports(normalizedReports)
+      setSyncError('')
+    } catch (error) {
+      setSyncError(error.message ?? 'Failed to load live data. Showing latest cached records.')
+    } finally {
+      setIsSyncing(false)
+    }
+  }, [accessToken])
+
+  useEffect(() => {
+    if (!isAuthenticated || USE_SEED_DATA || !accessToken) return
+
+    void hydrateFromApi()
+  }, [isAuthenticated, accessToken, hydrateFromApi])
+
+  const activeFlags = isAuthenticated ? flags : seedFlags
+  const activeReports = isAuthenticated ? reports : seedReports
+  const effectiveSyncError = isAuthenticated ? syncError : ''
+  const effectiveIsSyncing = isAuthenticated ? isSyncing : false
+
+  const updateFlagStatus = async (flagId, nextStatus) => {
+    const normalizedStatus = toCanonicalStatus(nextStatus)
+
+    if (USE_SEED_DATA || !accessToken) {
+      setFlags((currentFlags) =>
+        currentFlags.map((flag) => {
+          if (flag.flag_id !== flagId) return flag
+
+          const updatedFlag = {
+            ...flag,
+            status: normalizedStatus,
+          }
+
+          return {
+            ...updatedFlag,
+            ...deriveCorroborationState(updatedFlag),
+          }
+        }),
+      )
+
+      return
+    }
+
+    try {
+      const payload = await patchFlag({
+        token: accessToken,
+        flagId,
+        status: normalizedStatus,
+      })
+
+      const patchedRecord = extractRecord(payload)
+
+      setFlags((currentFlags) =>
+        currentFlags.map((flag) => {
+          if (flag.flag_id !== flagId) return flag
+
+          if (!patchedRecord || typeof patchedRecord !== 'object') {
+            const updatedFlag = {
+              ...flag,
+              status: normalizedStatus,
+            }
+
+            return {
+              ...updatedFlag,
+              ...deriveCorroborationState(updatedFlag),
+            }
+          }
+
+          return normalizeFlagRecord(
+            {
+              ...flag,
+              ...patchedRecord,
+            },
+            jurisdictionsById,
+          )
+        }),
+      )
+
+      setSyncError('')
+    } catch (error) {
+      setSyncError(error.message ?? 'Failed to update flag status.')
+    }
   }
 
-  const updateOfficerNote = (flagId, note) => {
-    setFlags((currentFlags) =>
-      currentFlags.map((flag) =>
-        flag.flag_id === flagId
-          ? {
-              ...flag,
-              officer_note: note,
-            }
-          : flag,
-      ),
-    )
+  const updateOfficerNote = async (flagId, note) => {
+    if (USE_SEED_DATA || !accessToken) {
+      setFlags((currentFlags) =>
+        currentFlags.map((flag) =>
+          flag.flag_id === flagId
+            ? {
+                ...flag,
+                officer_notes: note,
+                officer_note: note,
+              }
+            : flag,
+        ),
+      )
+
+      return
+    }
+
+    const existingFlag = flags.find((flag) => flag.flag_id === flagId)
+
+    if (!existingFlag) return
+
+    try {
+      const payload = await patchFlag({
+        token: accessToken,
+        flagId,
+        status: existingFlag.status,
+        officerNotes: note,
+      })
+
+      const patchedRecord = extractRecord(payload)
+
+      setFlags((currentFlags) =>
+        currentFlags.map((flag) =>
+          flag.flag_id === flagId
+            ? normalizeFlagRecord(
+                {
+                  ...flag,
+                  ...(patchedRecord && typeof patchedRecord === 'object' ? patchedRecord : {}),
+                  officer_notes: note,
+                },
+                jurisdictionsById,
+              )
+            : flag,
+        ),
+      )
+
+      setSyncError('')
+    } catch (error) {
+      setSyncError(error.message ?? 'Failed to save officer note.')
+    }
   }
 
   const escalateFlag = (flagId) => {
@@ -164,8 +480,43 @@ export function AppDataProvider({ children }) {
     )
   }
 
-  const analytics = useMemo(() => buildAnalytics(flags), [flags])
-  const citizenReports = useMemo(() => deriveCitizenReports(flags), [flags])
+  const clearAllData = async () => {
+    if (USE_SEED_DATA || !accessToken) {
+      setFlags([])
+      setReports([])
+      setSyncError('')
+      return {
+        success: true,
+      }
+    }
+
+    try {
+      await clearTestData({ token: accessToken })
+      await hydrateFromApi()
+      setSyncError('')
+      return {
+        success: true,
+      }
+    } catch (error) {
+      const message = error.message ?? 'Failed to clear test data.'
+      setSyncError(message)
+      return {
+        success: false,
+        error: message,
+      }
+    }
+  }
+
+  const inferredPingCount = USE_SEED_DATA
+    ? satellitePings.length
+    : activeFlags.filter((flag) => flag.source === 'Satellite' || flag.source === 'Combined').length
+
+  const analytics = useMemo(
+    () => buildAnalytics(activeFlags, activeReports, inferredPingCount),
+    [activeFlags, activeReports, inferredPingCount],
+  )
+
+  const citizenReports = useMemo(() => activeReports, [activeReports])
 
   const backtestSummary = useMemo(() => {
     const total = backtestEvents.length
@@ -193,26 +544,28 @@ export function AppDataProvider({ children }) {
     }
   }, [])
 
-  const value = useMemo(
-    () => ({
-      rawData: seedData,
-      flags,
-      jurisdictions,
-      jurisdictionsById,
-      users: officers,
-      citizenReporters,
-      citizenReports,
-      backtestEvents,
-      backtestSummary,
-      analytics,
-      updateFlagStatus,
-      updateOfficerNote,
-      escalateFlag,
-      addOfficer,
-      removeOfficer,
-    }),
-    [flags, citizenReports, analytics, backtestSummary, officers],
-  )
+  const value = {
+    rawData: seedData,
+    flags: activeFlags,
+    jurisdictions,
+    jurisdictionsById,
+    users: officers,
+    citizenReporters,
+    citizenReports,
+    satellitePings,
+    backtestEvents,
+    backtestSummary,
+    analytics,
+    isSyncing: effectiveIsSyncing,
+    syncError: effectiveSyncError,
+    refreshData: hydrateFromApi,
+    updateFlagStatus,
+    updateOfficerNote,
+    escalateFlag,
+    addOfficer,
+    removeOfficer,
+    clearAllData,
+  }
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>
 }

@@ -33,7 +33,7 @@ const statConfig = [
   },
   {
     key: 'satelliteSignals',
-    label: 'Satellite Signals',
+    label: 'Satellite Pings',
     icon: Radar,
     color: 'text-[#0a7286] bg-[#e6f6fa]',
   },

@@ -15,8 +15,8 @@ function JurisdictionsPage() {
         return {
           ...jurisdiction,
           totalFlags: jurisdictionFlags.length,
-          underReview: jurisdictionFlags.filter((flag) => flag.status === 'under_review').length,
-          verified: jurisdictionFlags.filter((flag) => flag.status === 'verified').length,
+          underReview: jurisdictionFlags.filter((flag) => flag.status === 'Under Review').length,
+          verified: jurisdictionFlags.filter((flag) => flag.status === 'Verified').length,
         }
       }),
     [jurisdictions, scopedFlags],

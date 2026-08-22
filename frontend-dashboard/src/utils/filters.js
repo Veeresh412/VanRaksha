@@ -5,7 +5,7 @@ export function applyRoleScope(flags, session, jurisdictionsById) {
     return flags.filter(
       (flag) =>
         flag.jurisdiction_id === session.jurisdiction_id &&
-        flag.corroboration_state !== 'single_source',
+        flag.corroboration_state !== 'Single-source',
     )
   }
 
@@ -28,7 +28,7 @@ export function applyRoleScope(flags, session, jurisdictionsById) {
       return (
         matchDistrict &&
         matchJurisdictionSet &&
-        flag.corroboration_state !== 'single_source'
+        flag.corroboration_state !== 'Single-source'
       )
     })
   }

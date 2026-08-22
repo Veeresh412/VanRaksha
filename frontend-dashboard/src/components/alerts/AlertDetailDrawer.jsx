@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { MapContainer, TileLayer, CircleMarker } from 'react-leaflet'
 import { CalendarDays, MapPin, ShieldCheck, UserRound, X } from 'lucide-react'
 import StatusBadge from '../common/StatusBadge'
@@ -36,11 +36,13 @@ function AlertDetailDrawer({
   onSaveOfficerNote,
   role,
 }) {
-  const [officerNote, setOfficerNote] = useState(flag?.officer_note ?? '')
+  const [officerNote, setOfficerNote] = useState(flag?.officer_notes ?? '')
 
-  useEffect(() => {
-    setOfficerNote(flag?.officer_note ?? '')
-  }, [flag])
+  const isUnderReview = flag?.status === 'Under Review'
+  const isVerified = flag?.status === 'Verified'
+  const isRejected = flag?.status === 'Rejected'
+  const isResolved = flag?.status === 'Resolved'
+  const noteUnchanged = (officerNote ?? '').trim() === (flag?.officer_notes ?? '').trim()
 
   if (!open || !flag) return null
 
@@ -51,7 +53,7 @@ function AlertDetailDrawer({
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-[#6c7a73]">Alert Detail</p>
             <h3 className="mt-1 text-xl font-semibold text-[#143126]">{formatFlagCode(flag.flag_id)}</h3>
-            <p className="mt-1 text-sm text-[#4e6158]">{formatChangeType(flag.change_type)}</p>
+            <p className="mt-1 text-sm text-[#4e6158]">{formatChangeType(flag.signal_type)}</p>
           </div>
           <button
             type="button"
@@ -77,20 +79,20 @@ function AlertDetailDrawer({
         </div>
 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <DetailRow label="Detection Confidence" value={formatConfidence(flag.confidence_score)} />
-          <DetailRow label="Detected" value={formatDate(flag.date_detected)} />
+          <DetailRow label="Detection Confidence" value={formatConfidence(flag.satellite_confidence)} />
+          <DetailRow label="Detected" value={formatDate(flag.created_at)} />
           <DetailRow label="Jurisdiction" value={jurisdiction?.gram_sabha ?? 'Unknown'} />
           <DetailRow label="District" value={jurisdiction?.district ?? 'Unknown'} />
           <DetailRow label="State" value={jurisdiction?.state ?? 'Unknown'} />
-          <DetailRow label="Coordinates" value={formatCoordinates(flag.lat, flag.long)} />
+          <DetailRow label="Coordinates" value={formatCoordinates(flag.latitude, flag.longitude)} />
         </div>
 
         <div className="mt-4">
           <h4 className="text-sm font-semibold text-[#1f3a2f]">Contextual Map</h4>
           <div className="mt-2 h-56 overflow-hidden rounded-lg border border-[#d8e1d8]">
-            <MapContainer center={[flag.lat, flag.long]} zoom={13} scrollWheelZoom>
+            <MapContainer center={[flag.latitude, flag.longitude]} zoom={13} scrollWheelZoom>
               <TileLayer url={mapTileUrl} />
-              <CircleMarker center={[flag.lat, flag.long]} radius={9} pathOptions={{ color: '#E5534B', fillOpacity: 0.8 }} />
+              <CircleMarker center={[flag.latitude, flag.longitude]} radius={9} pathOptions={{ color: '#E5534B', fillOpacity: 0.8 }} />
             </MapContainer>
           </div>
         </div>
@@ -110,30 +112,34 @@ function AlertDetailDrawer({
           <button
             type="button"
             onClick={() => onUnderReview(flag.flag_id)}
-            className="inline-flex items-center gap-1 rounded-md border border-[#f0ca83] bg-[#fff6e5] px-3 py-2 text-xs font-semibold text-[#9a5502]"
+            disabled={isUnderReview || isResolved}
+            className="inline-flex items-center gap-1 rounded-md border border-[#f0ca83] bg-[#fff6e5] px-3 py-2 text-xs font-semibold text-[#9a5502] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <ShieldCheck size={13} /> Verify / Under Review
+            <ShieldCheck size={13} /> Move to Under Review
           </button>
           <button
             type="button"
             onClick={() => onVerify(flag.flag_id)}
-            className="rounded-md bg-[#0f6a43] px-3 py-2 text-xs font-semibold text-white"
+            disabled={isVerified || isResolved}
+            className="rounded-md bg-[#0f6a43] px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
           >
             Verify
           </button>
           <button
             type="button"
             onClick={() => onReject(flag.flag_id)}
-            className="rounded-md border border-[#e5b5b2] px-3 py-2 text-xs font-semibold text-[#b0463f]"
+            disabled={isRejected || isResolved}
+            className="rounded-md border border-[#e5b5b2] px-3 py-2 text-xs font-semibold text-[#b0463f] disabled:cursor-not-allowed disabled:opacity-60"
           >
             Reject
           </button>
           <button
             type="button"
             onClick={() => onResolve(flag.flag_id)}
-            className="rounded-md border border-[#b8d8c5] px-3 py-2 text-xs font-semibold text-[#206544]"
+            disabled={isResolved}
+            className="rounded-md border border-[#b8d8c5] px-3 py-2 text-xs font-semibold text-[#206544] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Resolve
+            Mark Resolved
           </button>
           {role === 'gram_sabha' && (
             <button
@@ -163,7 +169,8 @@ function AlertDetailDrawer({
               <button
                 type="button"
                 onClick={() => onSaveOfficerNote(flag.flag_id, officerNote)}
-                className="rounded-md bg-[#0f6a43] px-3 py-1.5 text-xs font-semibold text-white"
+                disabled={noteUnchanged}
+                className="rounded-md bg-[#0f6a43] px-3 py-1.5 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Save Note
               </button>
@@ -173,7 +180,7 @@ function AlertDetailDrawer({
 
         <p className="mt-4 rounded-md border border-[#e2e8e2] bg-[#f8faf8] p-3 text-xs text-[#67756d]">
           <MapPin size={13} className="mr-1 inline" />
-          Alerts represent unverified land-use change signals and require authorized human review.
+          Alerts represent potential land-use change signals and require authorized human review.
           <CalendarDays size={13} className="mx-1 inline" />
           The system supports prioritization and routing, not legal determination.
         </p>

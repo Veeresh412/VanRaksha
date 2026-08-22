@@ -11,7 +11,7 @@ function CorroborationBadge({
 }) {
   const label = formatCorroborationState(corroborationState)
   const displayLabel =
-    corroborationState === 'corroborated'
+    corroborationState === 'corroborated' || corroborationState === 'Corroborated'
       ? `${label} (${corroborationCount ?? 0} reports)`
       : label
 

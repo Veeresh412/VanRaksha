@@ -1,0 +1,232 @@
+{
+  "jurisdictions": [
+    {
+      "id": "jur_001",
+      "state": "Madhya Pradesh",
+      "district": "Dindori",
+      "gram_sabha": "Bajaag Gram Sabha",
+      "lat": 22.9430,
+      "long": 81.0770
+    },
+    {
+      "id": "jur_002",
+      "state": "Odisha",
+      "district": "Kandhamal",
+      "gram_sabha": "Tumudibandha Gram Sabha",
+      "lat": 20.2020,
+      "long": 84.0210
+    },
+    {
+      "id": "jur_003",
+      "state": "Chhattisgarh",
+      "district": "Bastar",
+      "gram_sabha": "Darbha Gram Sabha",
+      "lat": 19.0170,
+      "long": 81.9500
+    },
+    {
+      "id": "jur_004",
+      "state": "Jharkhand",
+      "district": "West Singhbhum",
+      "gram_sabha": "Manoharpur Gram Sabha",
+      "lat": 22.3800,
+      "long": 85.1900
+    },
+    {
+      "id": "jur_005",
+      "state": "Telangana",
+      "district": "Bhadradri Kothagudem",
+      "gram_sabha": "Chunchupalli Gram Sabha",
+      "lat": 17.6300,
+      "long": 80.6200
+    },
+    {
+      "id": "jur_006",
+      "state": "Maharashtra",
+      "district": "Gadchiroli",
+      "gram_sabha": "Etapalli Gram Sabha",
+      "lat": 19.3600,
+      "long": 80.1200
+    }
+  ],
+
+  "flags": [
+    {
+      "flag_id": "flag_1001",
+      "jurisdiction_id": "jur_001",
+      "lat": 22.9455,
+      "long": 81.0791,
+      "date_detected": "2026-08-10",
+      "source": "satellite",
+      "confidence_score": 0.82,
+      "status": "unverified",
+      "change_type": "vegetation_loss"
+    },
+    {
+      "flag_id": "flag_1002",
+      "jurisdiction_id": "jur_001",
+      "lat": 22.9401,
+      "long": 81.0733,
+      "date_detected": "2026-08-15",
+      "source": "citizen_report",
+      "confidence_score": 0.65,
+      "status": "under_review",
+      "change_type": "encroachment"
+    },
+    {
+      "flag_id": "flag_1003",
+      "jurisdiction_id": "jur_002",
+      "lat": 20.2045,
+      "long": 84.0182,
+      "date_detected": "2026-08-05",
+      "source": "satellite",
+      "confidence_score": 0.91,
+      "status": "verified",
+      "change_type": "vegetation_loss"
+    },
+    {
+      "flag_id": "flag_1004",
+      "jurisdiction_id": "jur_003",
+      "lat": 19.0192,
+      "long": 81.9522,
+      "date_detected": "2026-08-18",
+      "source": "citizen_report",
+      "confidence_score": 0.58,
+      "status": "unverified",
+      "change_type": "structure_built"
+    },
+    {
+      "flag_id": "flag_1005",
+      "jurisdiction_id": "jur_004",
+      "lat": 22.3822,
+      "long": 85.1878,
+      "date_detected": "2026-08-12",
+      "source": "satellite",
+      "confidence_score": 0.74,
+      "status": "under_review",
+      "change_type": "vegetation_loss"
+    },
+    {
+      "flag_id": "flag_1006",
+      "jurisdiction_id": "jur_005",
+      "lat": 17.6321,
+      "long": 80.6244,
+      "date_detected": "2026-08-19",
+      "source": "citizen_report",
+      "confidence_score": 0.70,
+      "status": "unverified",
+      "change_type": "encroachment"
+    },
+    {
+      "flag_id": "flag_1007",
+      "jurisdiction_id": "jur_006",
+      "lat": 19.3578,
+      "long": 80.1233,
+      "date_detected": "2026-08-08",
+      "source": "satellite",
+      "confidence_score": 0.88,
+      "status": "verified",
+      "change_type": "vegetation_loss"
+    },
+    {
+      "flag_id": "flag_1008",
+      "jurisdiction_id": "jur_002",
+      "lat": 20.2011,
+      "long": 84.0255,
+      "date_detected": "2026-08-20",
+      "source": "citizen_report",
+      "confidence_score": 0.42,
+      "status": "rejected",
+      "change_type": "structure_built"
+    }
+  ],
+
+  "users": {
+    "admin_accounts": [
+      {
+        "user_id": "admin_001",
+        "name": "R. Sharma",
+        "role": "admin",
+        "phone": "+91-9800000001",
+        "jurisdiction_access": "state_wide"
+      }
+    ],
+    "gram_sabha_accounts": [
+      {
+        "user_id": "gs_001",
+        "name": "Bajaag Gram Sabha Account",
+        "role": "gram_sabha",
+        "phone": "+91-9800000002",
+        "jurisdiction_id": "jur_001",
+        "otp_test_code": "123456"
+      },
+      {
+        "user_id": "gs_002",
+        "name": "Tumudibandha Gram Sabha Account",
+        "role": "gram_sabha",
+        "phone": "+91-9800000003",
+        "jurisdiction_id": "jur_002",
+        "otp_test_code": "123456"
+      }
+    ],
+    "citizen_reporters": [
+      {
+        "user_id": "cit_001",
+        "name": "Anonymous Reporter",
+        "role": "basic",
+        "verified": false
+      },
+      {
+        "user_id": "cit_002",
+        "name": "Geo-tagged Reporter",
+        "role": "geo_tagged",
+        "verified": false
+      },
+      {
+        "user_id": "cit_003",
+        "name": "Verified Reporter",
+        "role": "verified",
+        "verified": true
+      }
+    ]
+  },
+
+  "backtest_events": [
+    {
+      "event_id": "bt_001",
+      "district": "Dindori",
+      "date_range": "2025-01-01 to 2025-06-30",
+      "known_change": "vegetation_loss",
+      "ground_truth": "confirmed_encroachment",
+      "model_flagged": true,
+      "notes": "True positive — used in Round 1 accuracy claim"
+    },
+    {
+      "event_id": "bt_002",
+      "district": "Kandhamal",
+      "date_range": "2025-02-01 to 2025-05-15",
+      "known_change": "seasonal_canopy_variation",
+      "ground_truth": "no_encroachment",
+      "model_flagged": false,
+      "notes": "True negative — demonstrates seasonal noise filtering"
+    },
+    {
+      "event_id": "bt_003",
+      "district": "Bastar",
+      "date_range": "2025-03-01 to 2025-07-01",
+      "known_change": "structure_built",
+      "ground_truth": "confirmed_encroachment",
+      "model_flagged": true,
+      "notes": "True positive — structure detection case"
+    },
+    {
+      "event_id": "bt_004",
+      "district": "Gadchiroli",
+      "date_range": "2025-01-15 to 2025-04-15",
+      "known_change": "vegetation_loss",
+      "ground_truth": "no_encroachment",
+      "model_flagged": true,
+      "notes": "False positive — logged for Round 2 threshold tuning discussion"
+    }
+  ]
+}

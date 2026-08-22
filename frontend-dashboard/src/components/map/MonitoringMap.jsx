@@ -67,9 +67,10 @@ function ZoomControls() {
 }
 
 function getStatusColor(status) {
-  if (status === 'verified') return '#2E9B5F'
-  if (status === 'under_review') return '#F59E0B'
-  if (status === 'rejected') return '#74838A'
+  if (status === 'Verified') return '#2E9B5F'
+  if (status === 'Under Review') return '#F59E0B'
+  if (status === 'Rejected') return '#74838A'
+  if (status === 'Resolved') return '#0F5E40'
   return '#E5534B'
 }
 
@@ -91,7 +92,7 @@ function MonitoringMap({
   })
 
   const fallbackCenter = useMemo(() => {
-    if (selectedFlag) return [selectedFlag.lat, selectedFlag.long]
+    if (selectedFlag) return [selectedFlag.latitude, selectedFlag.longitude]
     if (selectedJurisdiction) return [selectedJurisdiction.latitude, selectedJurisdiction.longitude]
 
     if (!jurisdictions.length) return [20.5937, 78.9629]
@@ -150,16 +151,22 @@ function MonitoringMap({
 
         {layers.flags &&
           flags.map((flag) => {
-            const isSatelliteFlag = flag.source === 'satellite'
+            const isSatelliteOnly = flag.source === 'Satellite'
+            const isCitizenOnly = flag.source === 'Citizen Report'
+            const isCombined = flag.source === 'Combined'
 
-            if ((isSatelliteFlag && !layers.satellite) || (!isSatelliteFlag && !layers.citizen)) {
+            const hideSatellite = isSatelliteOnly && !layers.satellite
+            const hideCitizen = isCitizenOnly && !layers.citizen
+            const hideCombined = isCombined && !layers.satellite && !layers.citizen
+
+            if (hideSatellite || hideCitizen || hideCombined) {
               return null
             }
 
             return (
               <CircleMarker
                 key={flag.flag_id}
-                center={[flag.lat, flag.long]}
+                center={[flag.latitude, flag.longitude]}
                 radius={selectedFlag?.flag_id === flag.flag_id ? 10 : 7}
                 pathOptions={{
                   color: getStatusColor(flag.status),
@@ -233,7 +240,7 @@ function MonitoringMap({
             {Object.entries({
               jurisdictions: 'Jurisdictions',
               flags: 'Flags',
-              satellite: 'Satellite Signals',
+              satellite: 'Satellite Pings',
               citizen: 'Citizen Reports',
             }).map(([key, label]) => (
               <label key={key} className="flex cursor-pointer items-center gap-2 px-1 py-1.5 text-[#42574f]">
@@ -267,6 +274,7 @@ function MonitoringMap({
           <p><span className="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-[#F59E0B]" /> Under Review</p>
           <p><span className="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-[#2E9B5F]" /> Verified</p>
           <p><span className="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-[#74838A]" /> Rejected</p>
+          <p><span className="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-[#0F5E40]" /> Resolved</p>
           <p><span className="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-[#08A7C5]" /> Satellite signal</p>
           <p><span className="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-[#6C2BB8]" /> Citizen report</p>
           <p><span className="mr-2 inline-block h-2.5 w-2.5 rounded-full border border-[#9fd39d]" /> Jurisdiction</p>

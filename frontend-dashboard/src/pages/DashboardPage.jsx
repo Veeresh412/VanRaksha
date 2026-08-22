@@ -37,23 +37,13 @@ function DashboardPage() {
     () =>
       [...visibleFlags].sort(
         (flagA, flagB) =>
-          new Date(flagB.date_detected).getTime() - new Date(flagA.date_detected).getTime(),
+          new Date(flagB.created_at).getTime() - new Date(flagA.created_at).getTime(),
       ),
     [visibleFlags],
   )
 
-  useEffect(() => {
-    if (!sortedFlags.length) {
-      setSelectedFlagId(null)
-      return
-    }
-
-    if (!selectedFlagId || !sortedFlags.some((flag) => flag.flag_id === selectedFlagId)) {
-      setSelectedFlagId(sortedFlags[0].flag_id)
-    }
-  }, [sortedFlags, selectedFlagId])
-
-  const selectedFlag = sortedFlags.find((flag) => flag.flag_id === selectedFlagId) ?? null
+  const selectedFlag =
+    sortedFlags.find((flag) => flag.flag_id === selectedFlagId) ?? sortedFlags[0] ?? null
 
   const selectedJurisdiction = useMemo(() => {
     if (selectedFlag) {
@@ -75,8 +65,8 @@ function DashboardPage() {
     () => ({
       jurisdictionsMonitored: new Set(sortedFlags.map((flag) => flag.jurisdiction_id)).size,
       totalFlags: sortedFlags.length,
-      underReview: sortedFlags.filter((flag) => flag.status === 'under_review').length,
-      verified: sortedFlags.filter((flag) => flag.status === 'verified').length,
+      underReview: sortedFlags.filter((flag) => flag.status === 'Under Review').length,
+      verified: sortedFlags.filter((flag) => flag.status === 'Verified').length,
     }),
     [sortedFlags],
   )
@@ -86,10 +76,10 @@ function DashboardPage() {
     setDrawerOpen(true)
   }
 
-  const handleVerify = (flagId) => updateFlagStatus(flagId, 'verified')
-  const handleReject = (flagId) => updateFlagStatus(flagId, 'rejected')
-  const handleUnderReview = (flagId) => updateFlagStatus(flagId, 'under_review')
-  const handleResolve = (flagId) => updateFlagStatus(flagId, 'verified')
+  const handleVerify = (flagId) => updateFlagStatus(flagId, 'Verified')
+  const handleReject = (flagId) => updateFlagStatus(flagId, 'Rejected')
+  const handleUnderReview = (flagId) => updateFlagStatus(flagId, 'Under Review')
+  const handleResolve = (flagId) => updateFlagStatus(flagId, 'Resolved')
   const handleEscalate = (flagId) => escalateFlag(flagId)
 
   const closeInsight = () => {
@@ -197,8 +187,8 @@ function DashboardPage() {
 
       <div className="rounded-lg border border-[#dde6dd] bg-[#f7faf7] px-4 py-2.5 text-xs text-[#5f6d65]">
         <p className="text-center leading-relaxed">
-          All alerts are unverified and require human review by authorized officials. VanRaksha does
-          not determine legality or ownership.
+          Alerts represent potential land-use change signals and require authorized review.
+          VanRaksha does not determine legality or ownership.
         </p>
       </div>
 
@@ -281,6 +271,7 @@ function DashboardPage() {
       ) : null}
 
       <AlertDetailDrawer
+        key={selectedFlag?.flag_id ?? 'no-flag-selected'}
         open={drawerOpen}
         flag={selectedFlag}
         jurisdiction={selectedFlag ? jurisdictionsById[selectedFlag.jurisdiction_id] : null}

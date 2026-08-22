@@ -22,7 +22,7 @@ function AlertFlagsPage() {
     () =>
       [...visibleFlags].sort(
         (flagA, flagB) =>
-          new Date(flagB.date_detected).getTime() - new Date(flagA.date_detected).getTime(),
+          new Date(flagB.created_at).getTime() - new Date(flagA.created_at).getTime(),
       ),
     [visibleFlags],
   )
@@ -55,7 +55,7 @@ function AlertFlagsPage() {
             {sortedFlags.map((flag) => (
               <tr key={flag.flag_id} className="border-b border-[#edf2ed] text-[#264437]">
                 <td className="px-4 py-3 font-semibold">{formatFlagCode(flag.flag_id)}</td>
-                <td className="px-4 py-3">{formatChangeType(flag.change_type)}</td>
+                <td className="px-4 py-3">{formatChangeType(flag.signal_type)}</td>
                 <td className="px-4 py-3">{jurisdictionsById[flag.jurisdiction_id]?.gram_sabha}</td>
                 <td className="px-4 py-3"><SourceBadge source={flag.source} /></td>
                 <td className="px-4 py-3">
@@ -64,8 +64,8 @@ function AlertFlagsPage() {
                     corroborationCount={flag.corroboration_count}
                   />
                 </td>
-                <td className="px-4 py-3">{formatConfidence(flag.confidence_score)}</td>
-                <td className="px-4 py-3">{formatDate(flag.date_detected)}</td>
+                <td className="px-4 py-3">{formatConfidence(flag.satellite_confidence)}</td>
+                <td className="px-4 py-3">{formatDate(flag.created_at)}</td>
                 <td className="px-4 py-3"><StatusBadge status={flag.status} /></td>
                 <td className="px-4 py-3">
                   <button
@@ -83,15 +83,16 @@ function AlertFlagsPage() {
       </div>
 
       <AlertDetailDrawer
+        key={selectedFlag?.flag_id ?? 'no-flag-selected'}
         open={Boolean(selectedFlag)}
         flag={selectedFlag}
         jurisdiction={selectedFlag ? jurisdictionsById[selectedFlag.jurisdiction_id] : null}
         role={session.role}
         onClose={() => setSelectedFlagId(null)}
-        onUnderReview={(flagId) => updateFlagStatus(flagId, 'under_review')}
-        onVerify={(flagId) => updateFlagStatus(flagId, 'verified')}
-        onReject={(flagId) => updateFlagStatus(flagId, 'rejected')}
-        onResolve={(flagId) => updateFlagStatus(flagId, 'verified')}
+        onUnderReview={(flagId) => updateFlagStatus(flagId, 'Under Review')}
+        onVerify={(flagId) => updateFlagStatus(flagId, 'Verified')}
+        onReject={(flagId) => updateFlagStatus(flagId, 'Rejected')}
+        onResolve={(flagId) => updateFlagStatus(flagId, 'Resolved')}
         onEscalate={(flagId) => escalateFlag(flagId)}
         onSaveOfficerNote={updateOfficerNote}
       />

@@ -1,25 +1,37 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import TopBar from './TopBar'
 import { useAuth } from '../../contexts/AuthContext'
 import { useAppData } from '../../contexts/AppDataContext'
 import { applyDashboardFilters, applyRoleScope, listUnique } from '../../utils/filters'
+import { formatStatus } from '../../utils/formatters'
+import { USE_SEED_DATA } from '../../services/config'
 import InsightModal from '../common/InsightModal'
 
 const statusOptions = [
   { value: 'all', label: 'Status: All' },
-  { value: 'unverified', label: 'Status: Unverified' },
-  { value: 'under_review', label: 'Status: Under Review' },
-  { value: 'verified', label: 'Status: Verified' },
-  { value: 'rejected', label: 'Status: Rejected' },
+  { value: 'Unverified', label: 'Status: Unverified' },
+  { value: 'Under Review', label: 'Status: Under Review' },
+  { value: 'Verified', label: 'Status: Verified' },
+  { value: 'Rejected', label: 'Status: Rejected' },
+  { value: 'Resolved', label: 'Status: Resolved' },
 ]
 
 function DashboardLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const { session, logout } = useAuth()
-  const { flags, jurisdictions, jurisdictionsById, analytics } = useAppData()
+  const {
+    flags,
+    jurisdictions,
+    jurisdictionsById,
+    analytics,
+    citizenReports,
+    isSyncing,
+    syncError,
+    refreshData,
+  } = useAppData()
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [activeSidebarUtility, setActiveSidebarUtility] = useState(null)
   const isAdminLike = session.role === 'admin' || session.role === 'district_officer'
@@ -54,26 +66,26 @@ function DashboardLayout() {
     search: '',
   }))
 
-  useEffect(() => {
-    if (!isAdminLike) {
-      setFilters((currentFilters) => ({
-        ...currentFilters,
+  const effectiveFilters = useMemo(() => {
+    if (session.role === 'gram_sabha') {
+      return {
+        ...filters,
         state: 'all',
         district: 'all',
         jurisdiction: session.jurisdiction_id,
-      }))
-      return
+      }
     }
 
     if (session.role === 'district_officer') {
-      setFilters((currentFilters) => ({
-        ...currentFilters,
+      return {
+        ...filters,
         state: 'all',
         district: session.district ?? 'all',
-        jurisdiction: 'all',
-      }))
+      }
     }
-  }, [session, isAdminLike])
+
+    return filters
+  }, [filters, session])
 
   const stateOptions = useMemo(
     () => [
@@ -90,9 +102,9 @@ function DashboardLayout() {
 
   const districtOptions = useMemo(() => {
     const filteredByState =
-      filters.state === 'all'
+      effectiveFilters.state === 'all'
         ? accessibleJurisdictions
-        : accessibleJurisdictions.filter((jurisdiction) => jurisdiction.state === filters.state)
+        : accessibleJurisdictions.filter((jurisdiction) => jurisdiction.state === effectiveFilters.state)
 
     return [
       { value: 'all', label: 'District: All' },
@@ -103,13 +115,13 @@ function DashboardLayout() {
         }),
       ),
     ]
-  }, [accessibleJurisdictions, filters.state])
+  }, [accessibleJurisdictions, effectiveFilters.state])
 
   const jurisdictionOptions = useMemo(() => {
     const filteredJurisdictions = accessibleJurisdictions.filter((jurisdiction) => {
-      const matchesState = filters.state === 'all' || jurisdiction.state === filters.state
+      const matchesState = effectiveFilters.state === 'all' || jurisdiction.state === effectiveFilters.state
       const matchesDistrict =
-        filters.district === 'all' || jurisdiction.district === filters.district
+        effectiveFilters.district === 'all' || jurisdiction.district === effectiveFilters.district
       return matchesState && matchesDistrict
     })
 
@@ -123,15 +135,37 @@ function DashboardLayout() {
         label: jurisdiction.gram_sabha,
       })),
     ]
-  }, [accessibleJurisdictions, filters.state, filters.district, session, isAdminLike])
+  }, [accessibleJurisdictions, effectiveFilters.state, effectiveFilters.district, session, isAdminLike])
 
   const scopedFlags = useMemo(
     () => applyRoleScope(flags, session, jurisdictionsById),
     [flags, session, jurisdictionsById],
   )
+
+  const scopedCitizenReports = useMemo(() => {
+    if (session.role === 'admin') return citizenReports
+
+    if (session.role === 'district_officer') {
+      const scopedJurisdictions = new Set(session.jurisdiction_ids ?? [])
+
+      return citizenReports.filter((report) => {
+        if (!report.jurisdiction_id) return false
+
+        if (scopedJurisdictions.size > 0) {
+          return scopedJurisdictions.has(report.jurisdiction_id)
+        }
+
+        const jurisdiction = jurisdictionsById[report.jurisdiction_id]
+        return jurisdiction?.district === session.district
+      })
+    }
+
+    return citizenReports.filter((report) => report.jurisdiction_id === session.jurisdiction_id)
+  }, [citizenReports, session, jurisdictionsById])
+
   const visibleFlags = useMemo(
-    () => applyDashboardFilters(scopedFlags, filters, jurisdictionsById),
-    [scopedFlags, filters, jurisdictionsById],
+    () => applyDashboardFilters(scopedFlags, effectiveFilters, jurisdictionsById),
+    [scopedFlags, effectiveFilters, jurisdictionsById],
   )
 
   const notifications = useMemo(
@@ -139,14 +173,14 @@ function DashboardLayout() {
       [...scopedFlags]
         .sort(
           (flagA, flagB) =>
-            new Date(flagB.date_detected).getTime() -
-            new Date(flagA.date_detected).getTime(),
+            new Date(flagB.created_at).getTime() -
+            new Date(flagA.created_at).getTime(),
         )
         .slice(0, 3)
         .map((flag) => ({
           id: `notif-${flag.flag_id}`,
-          title: `${flag.flag_id.replace('flag_', 'FLAG-')} • ${flag.status.replace('_', ' ')}`,
-          subtitle: `${jurisdictionsById[flag.jurisdiction_id]?.gram_sabha ?? 'Jurisdiction'} • ${flag.date_detected}`,
+          title: `${flag.flag_id.replace('flag_', 'FLAG-')} • ${formatStatus(flag.status)}`,
+          subtitle: `${jurisdictionsById[flag.jurisdiction_id]?.gram_sabha ?? 'Jurisdiction'} • ${flag.created_at}`,
         })),
     [scopedFlags, jurisdictionsById],
   )
@@ -172,9 +206,7 @@ function DashboardLayout() {
     navigate('/login', { replace: true })
   }
 
-  useEffect(() => {
-    setIsSidebarOpen(false)
-  }, [location.pathname])
+  const liveModeEnabled = !USE_SEED_DATA
 
   return (
     <div className="min-h-screen bg-[#f7f8f4] text-[#15221c]">
@@ -182,7 +214,7 @@ function DashboardLayout() {
         session={session}
         analytics={{
           totalFlags: scopedFlags.length,
-          citizenReports: scopedFlags.filter((flag) => flag.source === 'citizen_report').length,
+          citizenReports: scopedCitizenReports.length,
         }}
         open={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
@@ -199,7 +231,7 @@ function DashboardLayout() {
       <div className="min-h-screen lg:pl-[236px]">
         <TopBar
           session={session}
-          filters={filters}
+          filters={effectiveFilters}
           setFilter={setFilter}
           stateOptions={stateOptions}
           districtOptions={districtOptions}
@@ -212,10 +244,45 @@ function DashboardLayout() {
           onLogout={handleLogout}
         />
 
+        <div className="px-3 pt-2 md:px-4 2xl:px-5">
+          {syncError ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#f4c3be] bg-[#fef0ee] px-3 py-2 text-xs text-[#bb4b42]">
+              <span>{syncError}</span>
+              {liveModeEnabled ? (
+                <button
+                  type="button"
+                  onClick={() => void refreshData()}
+                  disabled={isSyncing}
+                  className="rounded-md border border-[#efb3ae] bg-white px-2.5 py-1 font-semibold text-[#b0463f] disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {isSyncing ? 'Retrying...' : 'Retry Sync'}
+                </button>
+              ) : null}
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#dce5dc] bg-[#f8fbf8] px-3 py-2 text-xs text-[#5d6e65]">
+              <span>
+                Mode: <strong>{liveModeEnabled ? 'Live API' : 'Seed Data'}</strong>
+                {isSyncing ? ' • Syncing latest records...' : ''}
+              </span>
+              {liveModeEnabled ? (
+                <button
+                  type="button"
+                  onClick={() => void refreshData()}
+                  disabled={isSyncing}
+                  className="rounded-md border border-[#d2ddd2] bg-white px-2.5 py-1 font-semibold text-[#2f4f42] disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {isSyncing ? 'Refreshing...' : 'Refresh'}
+                </button>
+              ) : null}
+            </div>
+          )}
+        </div>
+
         <main className="p-3 md:p-4 2xl:p-5">
           <Outlet
             context={{
-              filters,
+              filters: effectiveFilters,
               setFilter,
               visibleFlags,
               scopedFlags,

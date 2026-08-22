@@ -30,7 +30,7 @@ function AlertCard({
         </div>
       </div>
 
-      <h3 className="mt-2 text-sm font-semibold text-[#203a2f]">{formatChangeType(flag.change_type)}</h3>
+      <h3 className="mt-2 text-sm font-semibold text-[#203a2f]">{formatChangeType(flag.signal_type)}</h3>
 
       <div className="mt-2">
         <CorroborationBadge
@@ -46,16 +46,16 @@ function AlertCard({
             <MapPin size={12} />
             {jurisdiction?.gram_sabha ?? 'Unknown Jurisdiction'}
           </p>
-          <p>{formatCoordinates(flag.lat, flag.long)}</p>
+          <p>{formatCoordinates(flag.latitude, flag.longitude)}</p>
         </div>
         <div className="text-right text-xs">
           <p className="text-[#7b8681]">Source</p>
           <SourceBadge source={flag.source} className="mt-1" />
-          <p className="mt-1 font-semibold text-[#1f6e44]">{formatConfidence(flag.confidence_score)}</p>
+          <p className="mt-1 font-semibold text-[#1f6e44]">{formatConfidence(flag.satellite_confidence)}</p>
         </div>
       </div>
 
-      <div className="mt-2 text-xs text-[#69766f]">{formatDate(flag.date_detected)}</div>
+      <div className="mt-2 text-xs text-[#69766f]">{formatDate(flag.created_at)}</div>
 
       <div className="mt-3 flex flex-wrap gap-2">
         <button
