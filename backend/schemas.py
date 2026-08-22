@@ -23,7 +23,7 @@ class SignalTypeEnum(str, Enum):
 
 class CorroborationStateEnum(str, Enum):
     single = "Single-source"
-    two_reports = "Corroborated (2 reports)"
+    multiple_reports = "Corroborated (Multiple reports)"
     report_satellite = "Corroborated (1 report + satellite)"
     tier_3 = "Tier 3 Fast-track"
 
@@ -58,6 +58,7 @@ class SatellitePingCreate(BaseModel):
     lng: float
     confidence_score: float
     signal_type: SignalTypeEnum
+    fra_parcel_id: Optional[str] = None
 
 class SatellitePingResponse(SatellitePingCreate):
     id: int
@@ -79,6 +80,7 @@ class FlagBase(BaseModel):
     district: Optional[str] = None
     state: Optional[str] = None
     officer_notes: Optional[str] = None
+    fra_parcel_id: Optional[str] = None
 
 class FlagResponse(FlagBase):
     id: int
@@ -91,12 +93,4 @@ class FlagUpdate(BaseModel):
     status: Optional[StatusEnum] = None
     officer_notes: Optional[str] = None
 
-# -------- AUTH --------
-class LoginRequest(BaseModel):
-    phone_number: str
-    otp: str
 
-class LoginResponse(BaseModel):
-    token: str
-    role: str
-    jurisdiction_id: Optional[int] = None

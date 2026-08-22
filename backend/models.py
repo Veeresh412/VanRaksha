@@ -1,21 +1,18 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, Boolean, DateTime, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, Boolean, DateTime, Enum as SQLEnum, JSON
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from database import Base
 import schemas
 
-class Jurisdiction(Base):
-    __tablename__ = "jurisdictions"
+class FRAParcel(Base):
+    __tablename__ = "fra_parcels"
 
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
-    
-    min_lat = Column(Float, nullable=True)
-    max_lat = Column(Float, nullable=True)
-    min_lng = Column(Float, nullable=True)
-    max_lng = Column(Float, nullable=True)
+    id = Column(String, primary_key=True)
+    title_holder_type = Column(String)
+    is_synthetic = Column(Boolean, default=True)
+    boundary = Column(JSON)
 
-    flags = relationship("Flag", back_populates="jurisdiction")
+    flags = relationship("Flag", back_populates="fra_parcel")
 
 class Flag(Base):
     __tablename__ = "flags"
@@ -34,8 +31,8 @@ class Flag(Base):
     state = Column(String, nullable=True)
     officer_notes = Column(String, nullable=True)
     
-    jurisdiction_id = Column(Integer, ForeignKey("jurisdictions.id"), nullable=True)
-    jurisdiction = relationship("Jurisdiction", back_populates="flags")
+    fra_parcel_id = Column(String, ForeignKey("fra_parcels.id"), nullable=True)
+    fra_parcel = relationship("FRAParcel", back_populates="flags")
     
     reports = relationship("Report", back_populates="linked_flag")
     satellite_pings = relationship("SatellitePing", back_populates="linked_flag")
@@ -71,6 +68,8 @@ class SatellitePing(Base):
     confidence_score = Column(Float, nullable=False)
     
     signal_type = Column(SQLEnum(schemas.SignalTypeEnum), nullable=False)
+    
+    fra_parcel_id = Column(String, ForeignKey("fra_parcels.id"), nullable=True)
     
     linked_flag_id = Column(Integer, ForeignKey("flags.id"), nullable=True)
     linked_flag = relationship("Flag", back_populates="satellite_pings")

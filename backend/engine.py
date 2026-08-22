@@ -50,7 +50,7 @@ def process_report_corroboration(db: Session, new_report: models.Report):
         if len(nearby_reports) >= 1:
             create_or_update_flag(
                 db, new_report.lat, new_report.lng, 
-                schemas.SignalTypeEnum.citizen, schemas.SourceEnum.citizen, schemas.CorroborationStateEnum.two_reports,
+                schemas.SignalTypeEnum.citizen, schemas.SourceEnum.citizen, schemas.CorroborationStateEnum.multiple_reports,
                 reports_to_link=[new_report, nearby_reports[0]]
             )
         elif len(nearby_pings) >= 1:
@@ -65,7 +65,7 @@ def process_report_corroboration(db: Session, new_report: models.Report):
         if len(nearby_reports) >= 2:
             create_or_update_flag(
                 db, new_report.lat, new_report.lng, 
-                schemas.SignalTypeEnum.citizen, schemas.SourceEnum.citizen, schemas.CorroborationStateEnum.two_reports,
+                schemas.SignalTypeEnum.citizen, schemas.SourceEnum.citizen, schemas.CorroborationStateEnum.multiple_reports,
                 reports_to_link=[new_report, nearby_reports[0], nearby_reports[1]]
             )
         elif len(nearby_reports) >= 1 and len(nearby_pings) >= 1:

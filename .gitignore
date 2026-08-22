@@ -1,0 +1,24 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Local environments and secrets
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Databases
+*.db
+*.sqlite3
+vanraksha_dev.db
+
+# IDEs
+.vscode/
+.idea/
+
+# Testing
+.pytest_cache/
+pytest_cache/

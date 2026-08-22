@@ -1,11 +1,20 @@
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+from dotenv import load_dotenv
 
+load_dotenv() # This forces Python to read the .env file!
 
-SQLALCHEMY_DATABASE_URL = "postgresql://postgres:postgres@localhost/vanraksha" # user password is this
+# Get the database URL from environment variables, fallback to SQLite for local dev
+SQLALCHEMY_DATABASE_URL = os.getenv(
+    "DATABASE_URL", 
+    "sqlite:///./vanraksha_dev.db"
+)
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
+# Connect arguments: SQLite needs check_same_thread=False, Postgres doesn't.
+connect_args = {"check_same_thread": False} if "sqlite" in SQLALCHEMY_DATABASE_URL else {}
+
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()

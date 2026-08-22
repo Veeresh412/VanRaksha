@@ -68,7 +68,8 @@ def create_satellite_ping(ping: schemas.SatellitePingCreate, db: Session = Depen
         lat=ping.lat,
         lng=ping.lng,
         confidence_score=ping.confidence_score,
-        signal_type=ping.signal_type
+        signal_type=ping.signal_type,
+        fra_parcel_id=ping.fra_parcel_id
     )
     db.add(db_ping)
     db.commit()
@@ -80,10 +81,10 @@ def create_satellite_ping(ping: schemas.SatellitePingCreate, db: Session = Depen
 
 # --- FLAGS ---
 @app.get("/flags", response_model=List[schemas.FlagResponse])
-def get_flags(jurisdiction_id: int = None, db: Session = Depends(database.get_db)):
+def get_flags(fra_parcel_id: str = None, db: Session = Depends(database.get_db)):
     query = db.query(models.Flag)
-    if jurisdiction_id:
-        query = query.filter(models.Flag.jurisdiction_id == jurisdiction_id)
+    if fra_parcel_id:
+        query = query.filter(models.Flag.fra_parcel_id == fra_parcel_id)
     return query.all()
 
 @app.get("/flags/{flag_id}", response_model=schemas.FlagResponse)
@@ -101,6 +102,10 @@ def update_flag(flag_id: int, flag_update: schemas.FlagUpdate, db: Session = Dep
         
     if flag_update.status:
         flag.status = flag_update.status
+        # Explicitly update all linked reports in the database
+        for report in flag.reports:
+            report.status = flag_update.status
+            
     if flag_update.officer_notes is not None:
         flag.officer_notes = flag_update.officer_notes
         
@@ -115,8 +120,11 @@ def clear_test_data(db: Session = Depends(database.get_db)):
     db.query(models.Report).delete()
     db.query(models.SatellitePing).delete()
     db.query(models.Flag).delete()
+    db.query(models.FRAParcel).delete()
     db.commit()
     return {"message": "All data cleared successfully."}
+
+
 
 if __name__ == "__main__":
     import uvicorn
