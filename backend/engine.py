@@ -7,10 +7,6 @@ import math
 R = 6371e3 
 
 def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    """
-    Calculate the great circle distance in meters between two points 
-    on the earth (specified in decimal degrees)
-    """
     phi1 = math.radians(lat1)
     phi2 = math.radians(lat2)
     delta_phi = math.radians(lat2 - lat1)
@@ -24,73 +20,120 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
     distance = R * c
     return distance
 
+def get_reporter_trust_from_tier(tier: int) -> str:
+    if tier == 3: return "Verified Reporter"
+    if tier == 2: return "Geo-tagged Reporter"
+    return "Basic Reporter"
+
 def process_report_corroboration(db: Session, new_report: models.Report):
-    """
-    Core engine logic: evaluates if a new report should escalate a flag.
-    - Tier 1: 2 independent reports, or 1 report + satellite flag
-    - Tier 2: 1 additional report, or nearby satellite flag
-    - Tier 3: Escalate immediately
-    
-    For now, we define "nearby" as within 500 meters.
-    """
     NEARBY_RADIUS_METERS = 500
     
-    # Base condition: if Tier 3, escalate immediately (create a flag)
     if new_report.tier == 3:
-        create_or_update_flag(db, new_report.lat, new_report.lng, "verified_fast_track", new_report.photo_url)
+        create_or_update_flag(
+            db, 
+            lat=new_report.lat, 
+            lng=new_report.lng, 
+            signal_type=schemas.SignalTypeEnum.citizen,
+            source=schemas.SourceEnum.citizen,
+            corroboration_state=schemas.CorroborationStateEnum.tier_3,
+            reports_to_link=[new_report]
+        )
         return
 
-    # Check for nearby reports
     all_reports = db.query(models.Report).filter(models.Report.id != new_report.id).all()
-    nearby_reports = []
-    
-    for r in all_reports:
-        dist = haversine_distance(new_report.lat, new_report.lng, r.lat, r.lng)
-        if dist <= NEARBY_RADIUS_METERS:
-            nearby_reports.append(r)
+    nearby_reports = [r for r in all_reports if haversine_distance(new_report.lat, new_report.lng, r.lat, r.lng) <= NEARBY_RADIUS_METERS]
             
-    # Check for nearby satellite flags
-    all_flags = db.query(models.Flag).all()
-    nearby_flags = []
-    for f in all_flags:
-        dist = haversine_distance(new_report.lat, new_report.lng, f.lat, f.lng)
-        if dist <= NEARBY_RADIUS_METERS:
-            nearby_flags.append(f)
+    all_pings = db.query(models.SatellitePing).all()
+    nearby_pings = [p for p in all_pings if haversine_distance(new_report.lat, new_report.lng, p.lat, p.lng) <= NEARBY_RADIUS_METERS]
             
-    # Evaluation logic
     if new_report.tier == 2:
-        # Needs 1 additional report or a satellite flag
-        if len(nearby_reports) >= 1 or len(nearby_flags) >= 1:
-            create_or_update_flag(db, new_report.lat, new_report.lng, "corroborated", new_report.photo_url)
+        if len(nearby_reports) >= 1:
+            create_or_update_flag(
+                db, new_report.lat, new_report.lng, 
+                schemas.SignalTypeEnum.citizen, schemas.SourceEnum.citizen, schemas.CorroborationStateEnum.two_reports,
+                reports_to_link=[new_report, nearby_reports[0]]
+            )
+        elif len(nearby_pings) >= 1:
+             create_or_update_flag(
+                db, new_report.lat, new_report.lng, 
+                nearby_pings[0].signal_type, schemas.SourceEnum.combined, schemas.CorroborationStateEnum.report_satellite,
+                reports_to_link=[new_report],
+                pings_to_link=[nearby_pings[0]]
+            )
             
     elif new_report.tier == 1:
-        # Needs 2 independent Tier 1+ reports or 1 report + satellite flag
-        if len(nearby_reports) >= 2 or (len(nearby_reports) >= 1 and len(nearby_flags) >= 1):
-            create_or_update_flag(db, new_report.lat, new_report.lng, "corroborated", new_report.photo_url)
+        if len(nearby_reports) >= 2:
+            create_or_update_flag(
+                db, new_report.lat, new_report.lng, 
+                schemas.SignalTypeEnum.citizen, schemas.SourceEnum.citizen, schemas.CorroborationStateEnum.two_reports,
+                reports_to_link=[new_report, nearby_reports[0], nearby_reports[1]]
+            )
+        elif len(nearby_reports) >= 1 and len(nearby_pings) >= 1:
+             create_or_update_flag(
+                db, new_report.lat, new_report.lng, 
+                nearby_pings[0].signal_type, schemas.SourceEnum.combined, schemas.CorroborationStateEnum.report_satellite,
+                reports_to_link=[new_report, nearby_reports[0]],
+                pings_to_link=[nearby_pings[0]]
+            )
 
-def create_or_update_flag(db: Session, lat: float, lng: float, corroboration_state: str, citizen_photo: str):
-    """
-    If a nearby flag exists, update it. Otherwise, create a new one.
-    """
+def process_satellite_ping_corroboration(db: Session, new_ping: models.SatellitePing):
     NEARBY_RADIUS_METERS = 500
-    all_flags = db.query(models.Flag).all()
     
+    # Check for existing flags to join
+    all_flags = db.query(models.Flag).all()
     for f in all_flags:
-        dist = haversine_distance(lat, lng, f.lat, f.lng)
-        if dist <= NEARBY_RADIUS_METERS:
-            # Update existing flag
-            f.corroboration_state = corroboration_state
-            if citizen_photo:
-                f.citizen_photo_url = citizen_photo
+        if haversine_distance(new_ping.lat, new_ping.lng, f.lat, f.lng) <= NEARBY_RADIUS_METERS:
+            # Upgrade existing flag
+            f.source = schemas.SourceEnum.combined
+            f.corroboration_state = schemas.CorroborationStateEnum.report_satellite
+            f.signal_type = new_ping.signal_type
+            if f.satellite_confidence is None or new_ping.confidence_score > f.satellite_confidence:
+                f.satellite_confidence = new_ping.confidence_score
+            new_ping.linked_flag_id = f.id
             db.commit()
             return
             
-    # Create new flag
-    new_flag = models.Flag(
-        lat=lat,
-        lng=lng,
-        corroboration_state=corroboration_state,
-        citizen_photo_url=citizen_photo
+    # For a hackathon, we assume a satellite ping creates an unverified flag
+    create_or_update_flag(
+        db, new_ping.lat, new_ping.lng, 
+        new_ping.signal_type, schemas.SourceEnum.satellite, schemas.CorroborationStateEnum.single,
+        pings_to_link=[new_ping]
     )
-    db.add(new_flag)
+
+def create_or_update_flag(db: Session, lat: float, lng: float, signal_type: schemas.SignalTypeEnum, source: schemas.SourceEnum, corroboration_state: schemas.CorroborationStateEnum, reports_to_link=None, pings_to_link=None):
+    NEARBY_RADIUS_METERS = 500
+    all_flags = db.query(models.Flag).all()
+    
+    target_flag = None
+    for f in all_flags:
+        if haversine_distance(lat, lng, f.lat, f.lng) <= NEARBY_RADIUS_METERS:
+            target_flag = f
+            break
+            
+    if target_flag:
+        target_flag.corroboration_state = corroboration_state
+        target_flag.source = source
+        target_flag.signal_type = signal_type
+    else:
+        target_flag = models.Flag(
+            lat=lat,
+            lng=lng,
+            signal_type=signal_type,
+            source=source,
+            corroboration_state=corroboration_state
+        )
+        db.add(target_flag)
+        db.commit()
+        db.refresh(target_flag)
+        
+    if reports_to_link:
+        for r in reports_to_link:
+            r.linked_flag_id = target_flag.id
+            
+    if pings_to_link:
+        for p in pings_to_link:
+            p.linked_flag_id = target_flag.id
+            if target_flag.satellite_confidence is None or p.confidence_score > target_flag.satellite_confidence:
+                target_flag.satellite_confidence = p.confidence_score
+                
     db.commit()

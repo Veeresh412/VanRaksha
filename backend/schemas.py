@@ -1,6 +1,31 @@
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
+from enum import Enum
+
+class StatusEnum(str, Enum):
+    unverified = "Unverified"
+    under_review = "Under Review"
+    verified = "Verified"
+    rejected = "Rejected"
+    resolved = "Resolved"
+
+class SourceEnum(str, Enum):
+    citizen = "Citizen Report"
+    satellite = "Satellite"
+    combined = "Combined"
+
+class SignalTypeEnum(str, Enum):
+    structure = "Potential Structure Change"
+    land_use = "Unverified Land-use Change"
+    vegetation = "Potential Vegetation Loss"
+    citizen = "Citizen Observation"
+
+class CorroborationStateEnum(str, Enum):
+    single = "Single-source"
+    two_reports = "Corroborated (2 reports)"
+    report_satellite = "Corroborated (1 report + satellite)"
+    tier_3 = "Tier 3 Fast-track"
 
 # -------- REPORTS --------
 class ReportCreate(BaseModel):
@@ -14,32 +39,57 @@ class ReportCreate(BaseModel):
 
 class ReportResponse(BaseModel):
     id: int
+    lat: float
+    lng: float
+    description: Optional[str] = None
     tier: int
+    reporter_trust: str
     authenticity_score: float
+    status: StatusEnum
+    linked_flag_id: Optional[int] = None
+    created_at: datetime
 
     class Config:
         from_attributes = True
 
-# -------- FLAGS --------
+# -------- SATELLITE PINGS --------
+class SatellitePingCreate(BaseModel):
+    lat: float
+    lng: float
+    confidence_score: float
+    signal_type: SignalTypeEnum
+
+class SatellitePingResponse(SatellitePingCreate):
+    id: int
+    linked_flag_id: Optional[int] = None
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+# -------- FLAGS (ALERTS) --------
 class FlagBase(BaseModel):
     lat: float
     lng: float
-    status: str
-    corroboration_state: str
+    signal_type: SignalTypeEnum
+    source: SourceEnum
+    status: StatusEnum
+    corroboration_state: CorroborationStateEnum
     satellite_confidence: Optional[float] = None
-    before_image_url: Optional[str] = None
-    after_image_url: Optional[str] = None
-    citizen_photo_url: Optional[str] = None
+    district: Optional[str] = None
+    state: Optional[str] = None
+    officer_notes: Optional[str] = None
 
 class FlagResponse(FlagBase):
     id: int
+    created_at: datetime
     
     class Config:
         from_attributes = True
 
 class FlagUpdate(BaseModel):
-    status: Optional[str] = None
-    escalated_to_district: Optional[bool] = None # We can use this to update status internally
+    status: Optional[StatusEnum] = None
+    officer_notes: Optional[str] = None
 
 # -------- AUTH --------
 class LoginRequest(BaseModel):
