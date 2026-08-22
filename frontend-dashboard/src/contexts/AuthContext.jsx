@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo, useState } from 'react'
-import { requestOtp, verifyOtp } from '../services/auth'
+import { requestOtpForPhone, verifyOtpForPhone } from '../services/auth'
 
 const AUTH_STORAGE_KEY = 'vanraksha_auth_session'
 
@@ -10,7 +10,14 @@ function getStoredSession() {
   if (!storedValue) return null
 
   try {
-    return JSON.parse(storedValue)
+    const parsed = JSON.parse(storedValue)
+
+    if (!parsed?.access_token) {
+      localStorage.removeItem(AUTH_STORAGE_KEY)
+      return null
+    }
+
+    return parsed
   } catch {
     localStorage.removeItem(AUTH_STORAGE_KEY)
     return null
@@ -22,16 +29,17 @@ export function AuthProvider({ children }) {
   const [isRequestingOtp, setIsRequestingOtp] = useState(false)
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false)
 
-  const sendOtp = async (payload) => {
+  const requestOtp = async (payload) => {
     setIsRequestingOtp(true)
-    const result = await requestOtp(payload)
+    const result = await requestOtpForPhone(payload)
     setIsRequestingOtp(false)
+
     return result
   }
 
-  const login = async (payload) => {
+  const verifyOtp = async (payload) => {
     setIsVerifyingOtp(true)
-    const result = await verifyOtp(payload)
+    const result = await verifyOtpForPhone(payload)
     setIsVerifyingOtp(false)
 
     if (!result.success) {
@@ -44,6 +52,8 @@ export function AuthProvider({ children }) {
     return result
   }
 
+  const login = verifyOtp
+
   const logout = () => {
     setSession(null)
     localStorage.removeItem(AUTH_STORAGE_KEY)
@@ -52,12 +62,14 @@ export function AuthProvider({ children }) {
   const value = useMemo(
     () => ({
       session,
-      sendOtp,
+      requestOtp,
+      verifyOtp,
       login,
       logout,
-      isAuthenticated: Boolean(session),
+      isAuthenticated: Boolean(session?.access_token),
       isRequestingOtp,
       isVerifyingOtp,
+      isLoggingIn: isVerifyingOtp,
     }),
     [session, isRequestingOtp, isVerifyingOtp],
   )

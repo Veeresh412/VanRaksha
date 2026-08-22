@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { CheckCircle2, Leaf, LockKeyhole, Phone, UserRound } from 'lucide-react'
+import { KeyRound, Leaf, Phone, UserRound } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
 const profileOptions = [
@@ -11,44 +11,73 @@ const profileOptions = [
 
 function LoginPage() {
   const navigate = useNavigate()
-  const {
-    login,
-    sendOtp,
-    isAuthenticated,
-    isRequestingOtp,
-    isVerifyingOtp,
-  } = useAuth()
+  const { requestOtp, verifyOtp, isAuthenticated, isRequestingOtp, isVerifyingOtp } = useAuth()
 
   const [phone, setPhone] = useState('')
-  const [otp, setOtp] = useState('')
   const [profileRole, setProfileRole] = useState('admin')
-  const [error, setError] = useState('')
+  const [otp, setOtp] = useState('')
   const [otpRequested, setOtpRequested] = useState(false)
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+
+  const normalizedPhone = phone.trim()
+  const normalizedOtp = otp.trim()
+  const phoneDigits = normalizedPhone.replace(/\D/g, '')
+  const otpDigits = normalizedOtp.replace(/\D/g, '')
+  const isPhoneValid = phoneDigits.length >= 10
+  const isOtpValid = otpDigits.length >= 4
+  const isSubmitting = isRequestingOtp || isVerifyingOtp
 
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />
   }
 
-  const handleRequestOtp = async (event) => {
+  const resetOtpFlow = () => {
+    setOtpRequested(false)
+    setOtp('')
+    setMessage('')
+  }
+
+  const handleSubmit = async (event) => {
     event.preventDefault()
     setError('')
+    setMessage('')
 
-    const response = await sendOtp({ phone, role: profileRole })
+    if (!otpRequested) {
+      if (!isPhoneValid) {
+        setError('Please enter a valid mobile number (at least 10 digits).')
+        return
+      }
 
-    if (!response.success) {
-      setOtpRequested(false)
-      setError(response.error)
+      const response = await requestOtp({ phone: normalizedPhone, role: profileRole })
+
+      if (!response.success) {
+        setError(response.error)
+        return
+      }
+
+      setOtpRequested(true)
+      setOtp('')
+
+      if (response.devOtp) {
+        setMessage(`OTP sent. In seed mode, use ${response.devOtp}.`)
+      } else {
+        setMessage('OTP sent successfully. Enter it to sign in.')
+      }
+
       return
     }
 
-    setOtpRequested(true)
-  }
+    if (!isOtpValid) {
+      setError('Please enter the OTP sent to your mobile number.')
+      return
+    }
 
-  const handleVerifyOtp = async (event) => {
-    event.preventDefault()
-    setError('')
-
-    const response = await login({ phone, otp, role: profileRole })
+    const response = await verifyOtp({
+      phone: normalizedPhone,
+      role: profileRole,
+      otp: normalizedOtp,
+    })
 
     if (!response.success) {
       setError(response.error)
@@ -75,37 +104,37 @@ function LoginPage() {
 
             <p className="mt-8 max-w-sm text-sm leading-relaxed text-[#d3ebe1]">
               Secure dashboard access for Gram Sabha, District, and State-level monitoring teams.
-              This demo uses seed data and a mock OTP fallback for presentation flow.
+              Sign in with your registered phone number and one-time password (OTP).
             </p>
 
             <div className="mt-8 space-y-3 text-sm text-[#def2e9]">
-              <p>Demo account types:</p>
+              <p>Supported account scopes:</p>
               <ul className="space-y-2 text-xs text-[#c7e7d8]">
                 <li>• Gram Sabha account (jurisdiction scoped)</li>
                 <li>• District officer account (district scoped)</li>
                 <li>• State admin account (state-wide)</li>
-                <li>• Test OTP for demo: 123456</li>
               </ul>
             </div>
           </div>
 
           <div className="p-8">
             <h2 className="text-2xl font-semibold text-[#143126]">Dashboard Login</h2>
-            <p className="mt-1 text-sm text-[#66736c]">OTP verification for authorized officers</p>
+            <p className="mt-1 text-sm text-[#66736c]">Phone + OTP secure sign in</p>
 
-            <form
-              className="mt-6 space-y-4"
-              onSubmit={otpRequested ? handleVerifyOtp : handleRequestOtp}
-            >
+            <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
               <label className="block">
                 <span className="mb-1 block text-sm font-medium text-[#345245]">Profile Type</span>
                 <div className="relative">
                   <UserRound size={16} className="absolute left-3 top-3 text-[#6f7b74]" />
                   <select
                     value={profileRole}
-                    onChange={(event) => setProfileRole(event.target.value)}
+                    onChange={(event) => {
+                      setProfileRole(event.target.value)
+                      if (error) setError('')
+                      if (otpRequested) resetOtpFlow()
+                    }}
                     disabled={otpRequested}
-                    className="h-11 w-full appearance-none rounded-lg border border-[#d7e0d7] bg-white pl-9 pr-3 text-sm outline-none transition focus:border-[#80bb95] disabled:cursor-not-allowed disabled:bg-[#f4f8f4]"
+                    className="h-11 w-full appearance-none rounded-lg border border-[#d7e0d7] bg-white pl-9 pr-3 text-sm outline-none transition focus:border-[#80bb95]"
                   >
                     {profileOptions.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -122,34 +151,47 @@ function LoginPage() {
                   <Phone size={16} className="absolute left-3 top-3 text-[#6f7b74]" />
                   <input
                     value={phone}
-                    onChange={(event) => setPhone(event.target.value)}
+                    onChange={(event) => {
+                      setPhone(event.target.value)
+                      if (error) setError('')
+                      if (otpRequested) resetOtpFlow()
+                    }}
                     placeholder="+91-98XXXXXXXX"
-                    readOnly={otpRequested}
-                    className="h-11 w-full rounded-lg border border-[#d7e0d7] pl-9 pr-3 text-sm outline-none transition focus:border-[#80bb95] read-only:cursor-not-allowed read-only:bg-[#f4f8f4]"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    disabled={otpRequested}
+                    className="h-11 w-full rounded-lg border border-[#d7e0d7] pl-9 pr-3 text-sm outline-none transition focus:border-[#80bb95]"
                     required
                   />
                 </div>
+                <p className="mt-1 text-xs text-[#71817a]">Use the registered number for the selected role.</p>
               </label>
 
               {otpRequested ? (
                 <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-[#345245]">OTP</span>
+                  <span className="mb-1 block text-sm font-medium text-[#345245]">OTP Code</span>
                   <div className="relative">
-                    <LockKeyhole size={16} className="absolute left-3 top-3 text-[#6f7b74]" />
+                    <KeyRound size={16} className="absolute left-3 top-3 text-[#6f7b74]" />
                     <input
                       value={otp}
-                      onChange={(event) => setOtp(event.target.value)}
-                      placeholder="Enter 6-digit OTP"
+                      onChange={(event) => {
+                        setOtp(event.target.value)
+                        if (error) setError('')
+                      }}
+                      placeholder="Enter OTP"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
                       className="h-11 w-full rounded-lg border border-[#d7e0d7] pl-9 pr-3 text-sm outline-none transition focus:border-[#80bb95]"
                       required
                     />
                   </div>
+                  <p className="mt-1 text-xs text-[#71817a]">Enter the OTP received on your registered number.</p>
                 </label>
               ) : null}
 
-              {otpRequested ? (
-                <p className="inline-flex items-center gap-1 rounded-lg border border-[#cde7d8] bg-[#eff8f2] px-3 py-2 text-xs text-[#226044]">
-                  <CheckCircle2 size={14} /> OTP requested. Enter code to continue.
+              {message ? (
+                <p className="rounded-lg border border-[#b7e0c4] bg-[#ecfaf1] px-3 py-2 text-sm text-[#206443]">
+                  {message}
                 </p>
               ) : null}
 
@@ -161,7 +203,7 @@ function LoginPage() {
 
               <button
                 type="submit"
-                disabled={otpRequested ? isVerifyingOtp : isRequestingOtp}
+                disabled={isSubmitting || !normalizedPhone || (otpRequested && !normalizedOtp)}
                 className="h-11 w-full rounded-lg bg-[#0e6943] text-sm font-semibold text-white transition hover:bg-[#0a5736] disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {otpRequested
@@ -169,27 +211,24 @@ function LoginPage() {
                     ? 'Verifying OTP...'
                     : 'Verify OTP & Sign In'
                   : isRequestingOtp
-                    ? 'Requesting OTP...'
-                    : 'Request OTP'}
+                    ? 'Sending OTP...'
+                    : 'Send OTP'}
               </button>
 
               {otpRequested ? (
                 <button
                   type="button"
-                  onClick={() => {
-                    setOtpRequested(false)
-                    setOtp('')
-                    setError('')
-                  }}
-                  className="h-10 w-full rounded-lg border border-[#d7e0d7] bg-white text-sm font-medium text-[#2b4a3d] transition hover:bg-[#f5f9f5]"
+                  onClick={resetOtpFlow}
+                  disabled={isSubmitting}
+                  className="h-10 w-full rounded-lg border border-[#cfd8d1] text-sm font-medium text-[#3f564a] transition hover:bg-[#f6f8f7] disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  Change Phone Number
+                  Change phone or profile
                 </button>
               ) : null}
             </form>
 
             <p className="mt-4 text-xs text-[#7b8780]">
-              OTP secrets remain hidden in dashboard views and are used only for this demo flow.
+              Sign in flow uses `POST /auth/request-otp` and `POST /auth/verify-otp`.
             </p>
           </div>
         </div>
