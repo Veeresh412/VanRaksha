@@ -35,7 +35,7 @@ def create_report(report: schemas.ReportCreate, db: Session = Depends(database.g
     return db_report
 
 # --- FLAGS ---
-@app.get("/flags", response_model=List[schemas.FlagResponse])   # for flags request that omkar's frontend wants
+@app.get("/flags", response_model=List[schemas.FlagResponse])   # for flags list request that omkar's frontend wants
 def get_flags(jurisdiction_id: int = None, db: Session = Depends(database.get_db)):
     # Note: In a real app with Auth, jurisdiction_id would come from the JWT token.
     query = db.query(models.Flag)
@@ -43,14 +43,14 @@ def get_flags(jurisdiction_id: int = None, db: Session = Depends(database.get_db
         query = query.filter(models.Flag.jurisdiction_id == jurisdiction_id)
     return query.all()
 
-@app.get("/flags/{flag_id}", response_model=schemas.FlagResponse)  # for flags that have been resolved and stuff (omkar)
+@app.get("/flags/{flag_id}", response_model=schemas.FlagResponse)  # for specific flags
 def get_flag(flag_id: int, db: Session = Depends(database.get_db)):
     flag = db.query(models.Flag).filter(models.Flag.id == flag_id).first()
     if not flag:
         raise HTTPException(status_code=404, detail="Flag not found")
     return flag
 
-@app.patch("/flags/{flag_id}", response_model=schemas.FlagResponse)
+@app.patch("/flags/{flag_id}", response_model=schemas.FlagResponse) # for updates on existing flags
 def update_flag(flag_id: int, flag_update: schemas.FlagUpdate, db: Session = Depends(database.get_db)):
     flag = db.query(models.Flag).filter(models.Flag.id == flag_id).first()
     if not flag:
