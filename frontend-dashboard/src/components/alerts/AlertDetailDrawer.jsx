@@ -1,0 +1,185 @@
+import { useEffect, useState } from 'react'
+import { MapContainer, TileLayer, CircleMarker } from 'react-leaflet'
+import { CalendarDays, MapPin, ShieldCheck, UserRound, X } from 'lucide-react'
+import StatusBadge from '../common/StatusBadge'
+import SourceBadge from '../common/SourceBadge'
+import CorroborationBadge from '../common/CorroborationBadge'
+import {
+  formatChangeType,
+  formatConfidence,
+  formatCoordinates,
+  formatDate,
+  formatFlagCode,
+} from '../../utils/formatters'
+
+const mapTileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+
+function DetailRow({ label, value }) {
+  return (
+    <div className="rounded-lg border border-[#e0e7df] bg-[#fbfdfb] p-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-[#76827b]">{label}</p>
+      <p className="mt-1 text-sm font-medium text-[#234437]">{value}</p>
+    </div>
+  )
+}
+
+function AlertDetailDrawer({
+  flag,
+  jurisdiction,
+  open,
+  onClose,
+  onUnderReview,
+  onVerify,
+  onReject,
+  onResolve,
+  onEscalate,
+  onSaveOfficerNote,
+  role,
+}) {
+  const [officerNote, setOfficerNote] = useState(flag?.officer_note ?? '')
+
+  useEffect(() => {
+    setOfficerNote(flag?.officer_note ?? '')
+  }, [flag])
+
+  if (!open || !flag) return null
+
+  return (
+    <div className="fixed inset-0 z-[1800] flex justify-end bg-[#0d251a]/40 backdrop-blur-[2px] animate-[vr-fade-in_180ms_ease-out]">
+      <aside className="vr-subtle-scrollbar h-full w-full max-w-xl animate-[vr-slide-in-right_220ms_cubic-bezier(.2,.9,.2,1)] overflow-y-auto bg-white p-5 shadow-2xl">
+        <div className="mb-4 flex items-start justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#6c7a73]">Alert Detail</p>
+            <h3 className="mt-1 text-xl font-semibold text-[#143126]">{formatFlagCode(flag.flag_id)}</h3>
+            <p className="mt-1 text-sm text-[#4e6158]">{formatChangeType(flag.change_type)}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md border border-[#d7dfd7] p-2 text-[#41554d] transition hover:bg-[#f3f7f3]"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <StatusBadge status={flag.status} />
+          <SourceBadge source={flag.source} />
+          <CorroborationBadge
+            corroborationState={flag.corroboration_state}
+            corroborationCount={flag.corroboration_count}
+          />
+          {flag.escalated && (
+            <span className="rounded-full border border-[#f9d596] bg-[#fff6e5] px-2.5 py-1 text-xs font-semibold text-[#9f5b03]">
+              Escalated
+            </span>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <DetailRow label="Detection Confidence" value={formatConfidence(flag.confidence_score)} />
+          <DetailRow label="Detected" value={formatDate(flag.date_detected)} />
+          <DetailRow label="Jurisdiction" value={jurisdiction?.gram_sabha ?? 'Unknown'} />
+          <DetailRow label="District" value={jurisdiction?.district ?? 'Unknown'} />
+          <DetailRow label="State" value={jurisdiction?.state ?? 'Unknown'} />
+          <DetailRow label="Coordinates" value={formatCoordinates(flag.lat, flag.long)} />
+        </div>
+
+        <div className="mt-4">
+          <h4 className="text-sm font-semibold text-[#1f3a2f]">Contextual Map</h4>
+          <div className="mt-2 h-56 overflow-hidden rounded-lg border border-[#d8e1d8]">
+            <MapContainer center={[flag.lat, flag.long]} zoom={13} scrollWheelZoom>
+              <TileLayer url={mapTileUrl} />
+              <CircleMarker center={[flag.lat, flag.long]} radius={9} pathOptions={{ color: '#E5534B', fillOpacity: 0.8 }} />
+            </MapContainer>
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="rounded-lg border border-dashed border-[#d5dfd5] bg-[#fafdf9] p-3">
+            <h4 className="text-sm font-semibold text-[#1f3a2f]">Before/After Satellite Images</h4>
+            <p className="mt-2 text-xs text-[#66736c]">Placeholder: imagery will be linked by backend API.</p>
+          </div>
+          <div className="rounded-lg border border-dashed border-[#d5dfd5] bg-[#fafdf9] p-3">
+            <h4 className="text-sm font-semibold text-[#1f3a2f]">Citizen Photos</h4>
+            <p className="mt-2 text-xs text-[#66736c]">Placeholder: uploaded photos will appear here when integrated.</p>
+          </div>
+        </div>
+
+        <div className="mt-5 flex flex-wrap gap-2 border-t border-[#e3e9e3] pt-4">
+          <button
+            type="button"
+            onClick={() => onUnderReview(flag.flag_id)}
+            className="inline-flex items-center gap-1 rounded-md border border-[#f0ca83] bg-[#fff6e5] px-3 py-2 text-xs font-semibold text-[#9a5502]"
+          >
+            <ShieldCheck size={13} /> Verify / Under Review
+          </button>
+          <button
+            type="button"
+            onClick={() => onVerify(flag.flag_id)}
+            className="rounded-md bg-[#0f6a43] px-3 py-2 text-xs font-semibold text-white"
+          >
+            Verify
+          </button>
+          <button
+            type="button"
+            onClick={() => onReject(flag.flag_id)}
+            className="rounded-md border border-[#e5b5b2] px-3 py-2 text-xs font-semibold text-[#b0463f]"
+          >
+            Reject
+          </button>
+          <button
+            type="button"
+            onClick={() => onResolve(flag.flag_id)}
+            className="rounded-md border border-[#b8d8c5] px-3 py-2 text-xs font-semibold text-[#206544]"
+          >
+            Resolve
+          </button>
+          {role === 'gram_sabha' && (
+            <button
+              type="button"
+              onClick={() => onEscalate(flag.flag_id)}
+              className="inline-flex items-center gap-1 rounded-md border border-[#d3dce5] px-3 py-2 text-xs font-semibold text-[#33495f]"
+            >
+              <UserRound size={13} /> Escalate
+            </button>
+          )}
+        </div>
+
+        {(role === 'admin' || role === 'district_officer') && (
+          <div className="mt-4 rounded-lg border border-[#dfe6df] bg-[#fbfdfb] p-3">
+            <label className="text-xs font-semibold uppercase tracking-wide text-[#6f7b74]" htmlFor="officer-note">
+              Officer Note (Internal)
+            </label>
+            <textarea
+              id="officer-note"
+              value={officerNote}
+              onChange={(event) => setOfficerNote(event.target.value)}
+              rows={3}
+              placeholder="Add internal review note for district/admin team."
+              className="mt-2 w-full resize-y rounded-md border border-[#d0dbd0] px-3 py-2 text-sm text-[#254237] outline-none focus:border-[#7bb891]"
+            />
+            <div className="mt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => onSaveOfficerNote(flag.flag_id, officerNote)}
+                className="rounded-md bg-[#0f6a43] px-3 py-1.5 text-xs font-semibold text-white"
+              >
+                Save Note
+              </button>
+            </div>
+          </div>
+        )}
+
+        <p className="mt-4 rounded-md border border-[#e2e8e2] bg-[#f8faf8] p-3 text-xs text-[#67756d]">
+          <MapPin size={13} className="mr-1 inline" />
+          Alerts represent unverified land-use change signals and require authorized human review.
+          <CalendarDays size={13} className="mx-1 inline" />
+          The system supports prioritization and routing, not legal determination.
+        </p>
+      </aside>
+    </div>
+  )
+}
+
+export default AlertDetailDrawer
