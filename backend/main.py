@@ -13,7 +13,7 @@ models.Base.metadata.create_all(bind=database.engine)
 app = FastAPI(title="VanRaksha API", version="1.0.0")
 
 # --- REPORTS ---
-@app.post("/reports", response_model=schemas.ReportResponse)
+@app.post("/reports", response_model=schemas.ReportResponse) # for new report coming from tanisha's frontend
 def create_report(report: schemas.ReportCreate, db: Session = Depends(database.get_db)):
     # Create the report record
     db_report = models.Report(
@@ -35,7 +35,7 @@ def create_report(report: schemas.ReportCreate, db: Session = Depends(database.g
     return db_report
 
 # --- FLAGS ---
-@app.get("/flags", response_model=List[schemas.FlagResponse])
+@app.get("/flags", response_model=List[schemas.FlagResponse])   # for flags request that omkar's frontend wants
 def get_flags(jurisdiction_id: int = None, db: Session = Depends(database.get_db)):
     # Note: In a real app with Auth, jurisdiction_id would come from the JWT token.
     query = db.query(models.Flag)
@@ -43,7 +43,7 @@ def get_flags(jurisdiction_id: int = None, db: Session = Depends(database.get_db
         query = query.filter(models.Flag.jurisdiction_id == jurisdiction_id)
     return query.all()
 
-@app.get("/flags/{flag_id}", response_model=schemas.FlagResponse)
+@app.get("/flags/{flag_id}", response_model=schemas.FlagResponse)  # for flags that have been resolved and stuff (omkar)
 def get_flag(flag_id: int, db: Session = Depends(database.get_db)):
     flag = db.query(models.Flag).filter(models.Flag.id == flag_id).first()
     if not flag:
@@ -78,6 +78,18 @@ def login(request: schemas.LoginRequest):
         return {"token": "mock-admin-token", "role": "admin", "jurisdiction_id": 1}
     else:
         return {"token": "mock-gram-sabha-token", "role": "gram_sabha", "jurisdiction_id": 1}
+
+# --- DEBUG / TESTING ---
+@app.delete("/test/clear-data")
+def clear_test_data(db: Session = Depends(database.get_db)):
+    """
+    Utility endpoint to clear all dummy reports and flags during hackathon testing.
+    DO NOT use in production!
+    """
+    db.query(models.Flag).delete()
+    db.query(models.Report).delete()
+    db.commit()
+    return {"message": "All flags and reports have been successfully deleted from the database."}
 
 if __name__ == "__main__":
     import uvicorn
