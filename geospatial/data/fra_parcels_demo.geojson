@@ -1,0 +1,78 @@
+{
+  "type": "FeatureCollection",
+  "name": "fra_parcels_demo",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "urn:ogc:def:crs:OGC:1.3:CRS84"
+    }
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "fra_parcel_id": "fra_parcel_mayurbhanj_001",
+        "name": "Similipal Buffer CFR Parcel Alpha",
+        "title_holder_type": "CFR",
+        "jurisdiction_id": "gram_sabha_jasipur_01",
+        "is_synthetic": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [86.2000, 21.9000],
+            [86.2200, 21.9000],
+            [86.2200, 21.9200],
+            [86.2000, 21.9200],
+            [86.2000, 21.9000]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "fra_parcel_id": "fra_parcel_mayurbhanj_002",
+        "name": "Baripada North Forest Rights Title",
+        "title_holder_type": "community",
+        "jurisdiction_id": "gram_sabha_baripada_02",
+        "is_synthetic": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [86.7200, 21.9400],
+            [86.7400, 21.9400],
+            [86.7400, 21.9600],
+            [86.7200, 21.9600],
+            [86.7200, 21.9400]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "fra_parcel_id": "fra_parcel_mayurbhanj_003",
+        "name": "Rairangpur CFR Forest Parcel",
+        "title_holder_type": "CFR",
+        "jurisdiction_id": "gram_sabha_rairangpur_03",
+        "is_synthetic": true
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [86.1500, 22.2500],
+            [86.1700, 22.2500],
+            [86.1700, 22.2700],
+            [86.1500, 22.2700],
+            [86.1500, 22.2500]
+          ]
+        ]
+      }
+    }
+  ]
+}
