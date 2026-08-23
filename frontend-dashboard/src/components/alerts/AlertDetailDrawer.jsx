@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { MapContainer, TileLayer, CircleMarker } from 'react-leaflet'
-import { CalendarDays, MapPin, ShieldCheck, UserRound, X } from 'lucide-react'
+import { BadgeCheck, CalendarDays, MapPin, Mic, ShieldCheck, UserRound, X } from 'lucide-react'
 import StatusBadge from '../common/StatusBadge'
 import SourceBadge from '../common/SourceBadge'
 import CorroborationBadge from '../common/CorroborationBadge'
@@ -11,6 +11,7 @@ import {
   formatDate,
   formatFlagCode,
 } from '../../utils/formatters'
+import { useAppLanguage } from '../../hooks/useAppLanguage'
 
 const mapTileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
 
@@ -26,6 +27,7 @@ function DetailRow({ label, value }) {
 function AlertDetailDrawer({
   flag,
   jurisdiction,
+  linkedReport,
   open,
   onClose,
   onUnderReview,
@@ -36,7 +38,25 @@ function AlertDetailDrawer({
   onSaveOfficerNote,
   role,
 }) {
+  const { t } = useAppLanguage()
   const [officerNote, setOfficerNote] = useState(flag?.officer_notes ?? '')
+
+  const normalizedSource = String(flag?.source ?? '').toLowerCase().replaceAll(' ', '_')
+  const isCitizenReport = normalizedSource === 'citizen_report'
+
+  const baseAuthenticityScore = linkedReport?.authenticity_score ?? flag?.satellite_confidence
+  const authenticityScorePercent =
+    typeof baseAuthenticityScore === 'number'
+      ? Math.round(baseAuthenticityScore <= 1 ? baseAuthenticityScore * 100 : baseAuthenticityScore)
+      : null
+
+  const hasAuthenticity = isCitizenReport && typeof authenticityScorePercent === 'number'
+  const isAuthenticityVerified = hasAuthenticity && authenticityScorePercent > 80
+  const isVerifiedNgoReport =
+    isCitizenReport &&
+    (linkedReport?.tier === 3 ||
+      /verified|ngo/i.test(String(linkedReport?.reporter_trust ?? '')) ||
+      /verified|ngo/i.test(String(linkedReport?.role ?? '')))
 
   const isUnderReview = flag?.status === 'Under Review'
   const isVerified = flag?.status === 'Verified'
@@ -76,6 +96,25 @@ function AlertDetailDrawer({
               Escalated
             </span>
           )}
+
+          {hasAuthenticity ? (
+            <span
+              className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                isAuthenticityVerified
+                  ? 'border-[#bae5c8] bg-[#eaf8ef] text-[#206544]'
+                  : 'border-[#f3d8a4] bg-[#fff7e7] text-[#8f5a04]'
+              }`}
+            >
+              {t('alerts.authenticity')}: {authenticityScorePercent}% ({isAuthenticityVerified ? t('alerts.verified') : t('alerts.potentialAi')})
+            </span>
+          ) : null}
+
+          {isVerifiedNgoReport ? (
+            <span className="rounded-full border border-[#deccff] bg-[#f4efff] px-2.5 py-1 text-xs font-semibold text-[#5d3faa]">
+              <BadgeCheck size={12} className="mr-1 inline" />
+              {t('alerts.verifiedNgo')}
+            </span>
+          ) : null}
         </div>
 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -86,6 +125,18 @@ function AlertDetailDrawer({
           <DetailRow label="State" value={jurisdiction?.state ?? 'Unknown'} />
           <DetailRow label="Coordinates" value={formatCoordinates(flag.latitude, flag.longitude)} />
         </div>
+
+        {isCitizenReport ? (
+          <div className="mt-4 rounded-lg border border-[#dfe6df] bg-[#fbfdfb] p-3">
+            <h4 className="text-sm font-semibold text-[#1f3a2f]">{t('alerts.citizenNarrative')}</h4>
+            <p className="mt-1 text-sm text-[#40554b]">
+              {linkedReport?.description ?? t('alerts.citizenFallback')}
+            </p>
+            <p className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-[#5d7068]">
+              <Mic size={13} /> {t('alerts.speechToText')}
+            </p>
+          </div>
+        ) : null}
 
         <div className="mt-4">
           <h4 className="text-sm font-semibold text-[#1f3a2f]">Contextual Map</h4>

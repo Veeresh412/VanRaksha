@@ -3,6 +3,7 @@ import AlertCard from './AlertCard'
 function ActiveAlertsFeed({
   flags,
   jurisdictionsById,
+  linkedReportsByFlagId,
   onSelectFlag,
   onVerify,
   onReject,
@@ -33,6 +34,7 @@ function ActiveAlertsFeed({
               key={flag.flag_id}
               flag={flag}
               jurisdiction={jurisdictionsById[flag.jurisdiction_id]}
+              linkedReport={linkedReportsByFlagId?.[flag.flag_id]}
               onViewDetails={() => onSelectFlag(flag)}
               onVerify={() => onVerify(flag.flag_id)}
               onReject={() => onReject(flag.flag_id)}

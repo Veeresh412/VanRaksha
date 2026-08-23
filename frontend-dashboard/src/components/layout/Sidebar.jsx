@@ -14,39 +14,42 @@ import {
   X,
 } from 'lucide-react'
 import { roleLabel } from '../../utils/formatters'
+import { useAppLanguage } from '../../hooks/useAppLanguage'
 
 function Sidebar({ session, analytics, open, onClose, onOpenHelp, onOpenFeedback }) {
+  const { t } = useAppLanguage()
+
   const adminNav = [
-    { label: 'Dashboard', path: '/dashboard', icon: Home },
-    { label: 'Jurisdictions', path: '/jurisdictions', icon: MapPinned },
+    { label: t('sidebar.dashboard'), path: '/dashboard', icon: Home },
+    { label: t('sidebar.jurisdictions'), path: '/jurisdictions', icon: MapPinned },
     {
-      label: 'Alert Flags',
+      label: t('sidebar.alertFlags'),
       path: '/alerts',
       icon: AlertTriangle,
       badge: analytics.totalFlags,
     },
     {
-      label: 'Citizen Reports',
+      label: t('sidebar.citizenReports'),
       path: '/reports',
       icon: ClipboardList,
       badge: analytics.citizenReports,
     },
-    { label: 'Accuracy Trend', path: '/backtesting', icon: BarChart3 },
-    { label: 'Admin Settings', path: '/settings', icon: Settings },
-    { label: 'Users & Roles', path: '/users', icon: Users },
+    { label: t('sidebar.accuracyTrend'), path: '/backtesting', icon: BarChart3 },
+    { label: t('sidebar.adminSettings'), path: '/settings', icon: Settings },
+    { label: t('sidebar.usersRoles'), path: '/users', icon: Users },
   ]
 
   const gramNav = [
-    { label: 'Dashboard', path: '/dashboard', icon: Home },
-    { label: 'My Jurisdiction', path: '/jurisdictions', icon: MapPinned },
+    { label: t('sidebar.dashboard'), path: '/dashboard', icon: Home },
+    { label: t('sidebar.myJurisdiction'), path: '/jurisdictions', icon: MapPinned },
     {
-      label: 'Alert Flags',
+      label: t('sidebar.alertFlags'),
       path: '/alerts',
       icon: AlertTriangle,
       badge: analytics.totalFlags,
     },
     {
-      label: 'Citizen Reports',
+      label: t('sidebar.citizenReports'),
       path: '/reports',
       icon: ClipboardList,
       badge: analytics.citizenReports,
@@ -54,21 +57,21 @@ function Sidebar({ session, analytics, open, onClose, onOpenHelp, onOpenFeedback
   ]
 
   const districtNav = [
-    { label: 'Dashboard', path: '/dashboard', icon: Home },
-    { label: 'Jurisdictions', path: '/jurisdictions', icon: MapPinned },
+    { label: t('sidebar.dashboard'), path: '/dashboard', icon: Home },
+    { label: t('sidebar.jurisdictions'), path: '/jurisdictions', icon: MapPinned },
     {
-      label: 'Alert Flags',
+      label: t('sidebar.alertFlags'),
       path: '/alerts',
       icon: AlertTriangle,
       badge: analytics.totalFlags,
     },
     {
-      label: 'Citizen Reports',
+      label: t('sidebar.citizenReports'),
       path: '/reports',
       icon: ClipboardList,
       badge: analytics.citizenReports,
     },
-    { label: 'Accuracy Trend', path: '/backtesting', icon: BarChart3 },
+    { label: t('sidebar.accuracyTrend'), path: '/backtesting', icon: BarChart3 },
   ]
 
   const navItems =

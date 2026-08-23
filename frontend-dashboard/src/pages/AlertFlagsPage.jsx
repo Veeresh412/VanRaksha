@@ -15,7 +15,7 @@ import {
 
 function AlertFlagsPage() {
   const { visibleFlags, jurisdictionsById, session } = useDashboardContext()
-  const { updateFlagStatus, escalateFlag, updateOfficerNote } = useAppData()
+  const { citizenReports, updateFlagStatus, escalateFlag, updateOfficerNote } = useAppData()
   const [selectedFlagId, setSelectedFlagId] = useState(null)
 
   const sortedFlags = useMemo(
@@ -28,6 +28,22 @@ function AlertFlagsPage() {
   )
 
   const selectedFlag = sortedFlags.find((flag) => flag.flag_id === selectedFlagId) ?? null
+
+  const linkedReportsByFlagId = useMemo(() => {
+    const byFlagId = {}
+
+    citizenReports.forEach((report) => {
+      if (!report.linked_flag_id) return
+
+      const existingReport = byFlagId[report.linked_flag_id]
+
+      if (!existingReport || Number(report.tier ?? 1) > Number(existingReport.tier ?? 1)) {
+        byFlagId[report.linked_flag_id] = report
+      }
+    })
+
+    return byFlagId
+  }, [citizenReports])
 
   return (
     <div>
@@ -87,6 +103,7 @@ function AlertFlagsPage() {
         open={Boolean(selectedFlag)}
         flag={selectedFlag}
         jurisdiction={selectedFlag ? jurisdictionsById[selectedFlag.jurisdiction_id] : null}
+        linkedReport={selectedFlag ? linkedReportsByFlagId[selectedFlag.flag_id] : null}
         role={session.role}
         onClose={() => setSelectedFlagId(null)}
         onUnderReview={(flagId) => updateFlagStatus(flagId, 'Under Review')}

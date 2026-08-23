@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { KeyRound, Leaf, Phone, UserRound } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { useAppLanguage } from '../hooks/useAppLanguage'
 
 const profileOptions = [
   { value: 'admin', label: 'State Administrator' },
@@ -12,11 +13,12 @@ const profileOptions = [
 function LoginPage() {
   const navigate = useNavigate()
   const { requestOtp, verifyOtp, isAuthenticated, isRequestingOtp, isVerifyingOtp } = useAuth()
+  const { t } = useAppLanguage()
 
   const [phone, setPhone] = useState('')
   const [profileRole, setProfileRole] = useState('admin')
   const [otp, setOtp] = useState('')
-  const [otpRequested, setOtpRequested] = useState(false)
+  const [step, setStep] = useState(1)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
@@ -27,13 +29,14 @@ function LoginPage() {
   const isPhoneValid = phoneDigits.length >= 10
   const isOtpValid = otpDigits.length >= 4
   const isSubmitting = isRequestingOtp || isVerifyingOtp
+  const isOtpStep = step === 2
 
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />
   }
 
   const resetOtpFlow = () => {
-    setOtpRequested(false)
+    setStep(1)
     setOtp('')
     setMessage('')
   }
@@ -43,7 +46,7 @@ function LoginPage() {
     setError('')
     setMessage('')
 
-    if (!otpRequested) {
+    if (!isOtpStep) {
       if (!isPhoneValid) {
         setError('Please enter a valid mobile number (at least 10 digits).')
         return
@@ -56,7 +59,7 @@ function LoginPage() {
         return
       }
 
-      setOtpRequested(true)
+      setStep(2)
       setOtp('')
 
       if (response.devOtp) {
@@ -118,12 +121,12 @@ function LoginPage() {
           </div>
 
           <div className="p-8">
-            <h2 className="text-2xl font-semibold text-[#143126]">Dashboard Login</h2>
-            <p className="mt-1 text-sm text-[#66736c]">Phone + OTP secure sign in</p>
+            <h2 className="text-2xl font-semibold text-[#143126]">{t('login.title')}</h2>
+            <p className="mt-1 text-sm text-[#66736c]">{t('login.subtitle')}</p>
 
             <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-[#345245]">Profile Type</span>
+                <span className="mb-1 block text-sm font-medium text-[#345245]">{t('login.profileType')}</span>
                 <div className="relative">
                   <UserRound size={16} className="absolute left-3 top-3 text-[#6f7b74]" />
                   <select
@@ -131,9 +134,9 @@ function LoginPage() {
                     onChange={(event) => {
                       setProfileRole(event.target.value)
                       if (error) setError('')
-                      if (otpRequested) resetOtpFlow()
+                      if (isOtpStep) resetOtpFlow()
                     }}
-                    disabled={otpRequested}
+                    disabled={isOtpStep}
                     className="h-11 w-full appearance-none rounded-lg border border-[#d7e0d7] bg-white pl-9 pr-3 text-sm outline-none transition focus:border-[#80bb95]"
                   >
                     {profileOptions.map((option) => (
@@ -146,7 +149,7 @@ function LoginPage() {
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-[#345245]">Phone Number</span>
+                <span className="mb-1 block text-sm font-medium text-[#345245]">{t('login.phoneNumber')}</span>
                 <div className="relative">
                   <Phone size={16} className="absolute left-3 top-3 text-[#6f7b74]" />
                   <input
@@ -154,12 +157,12 @@ function LoginPage() {
                     onChange={(event) => {
                       setPhone(event.target.value)
                       if (error) setError('')
-                      if (otpRequested) resetOtpFlow()
+                      if (isOtpStep) resetOtpFlow()
                     }}
                     placeholder="+91-98XXXXXXXX"
                     inputMode="tel"
                     autoComplete="tel"
-                    disabled={otpRequested}
+                    disabled={isOtpStep}
                     className="h-11 w-full rounded-lg border border-[#d7e0d7] pl-9 pr-3 text-sm outline-none transition focus:border-[#80bb95]"
                     required
                   />
@@ -167,9 +170,9 @@ function LoginPage() {
                 <p className="mt-1 text-xs text-[#71817a]">Use the registered number for the selected role.</p>
               </label>
 
-              {otpRequested ? (
+              {isOtpStep ? (
                 <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-[#345245]">OTP Code</span>
+                  <span className="mb-1 block text-sm font-medium text-[#345245]">{t('login.enterOtp')}</span>
                   <div className="relative">
                     <KeyRound size={16} className="absolute left-3 top-3 text-[#6f7b74]" />
                     <input
@@ -203,26 +206,26 @@ function LoginPage() {
 
               <button
                 type="submit"
-                disabled={isSubmitting || !normalizedPhone || (otpRequested && !normalizedOtp)}
+                disabled={isSubmitting || !normalizedPhone || (isOtpStep && !normalizedOtp)}
                 className="h-11 w-full rounded-lg bg-[#0e6943] text-sm font-semibold text-white transition hover:bg-[#0a5736] disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {otpRequested
+                {isOtpStep
                   ? isVerifyingOtp
                     ? 'Verifying OTP...'
-                    : 'Verify OTP & Sign In'
+                    : t('login.verifyLogin')
                   : isRequestingOtp
                     ? 'Sending OTP...'
-                    : 'Send OTP'}
+                    : t('login.sendOtp')}
               </button>
 
-              {otpRequested ? (
+              {isOtpStep ? (
                 <button
                   type="button"
                   onClick={resetOtpFlow}
                   disabled={isSubmitting}
                   className="h-10 w-full rounded-lg border border-[#cfd8d1] text-sm font-medium text-[#3f564a] transition hover:bg-[#f6f8f7] disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  Change phone or profile
+                  {t('login.changeDetails')}
                 </button>
               ) : null}
             </form>

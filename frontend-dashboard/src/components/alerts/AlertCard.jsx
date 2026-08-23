@@ -1,4 +1,4 @@
-import { Check, MapPin, ShieldAlert, X, XCircle } from 'lucide-react'
+import { BadgeCheck, Check, MapPin, Mic, ShieldAlert, X, XCircle } from 'lucide-react'
 import StatusBadge from '../common/StatusBadge'
 import SourceBadge from '../common/SourceBadge'
 import CorroborationBadge from '../common/CorroborationBadge'
@@ -9,15 +9,39 @@ import {
   formatDate,
   formatFlagCode,
 } from '../../utils/formatters'
+import { useAppLanguage } from '../../hooks/useAppLanguage'
 
 function AlertCard({
   flag,
   jurisdiction,
+  linkedReport,
   onViewDetails,
   onVerify,
   onReject,
   compact = false,
 }) {
+  const { t } = useAppLanguage()
+
+  const normalizedSource = String(flag.source ?? '').toLowerCase().replaceAll(' ', '_')
+  const isCitizenReport = normalizedSource === 'citizen_report'
+
+  const baseAuthenticityScore = linkedReport?.authenticity_score ?? flag.satellite_confidence
+  const authenticityScorePercent =
+    typeof baseAuthenticityScore === 'number'
+      ? Math.round(baseAuthenticityScore <= 1 ? baseAuthenticityScore * 100 : baseAuthenticityScore)
+      : null
+
+  const hasAuthenticity = isCitizenReport && typeof authenticityScorePercent === 'number'
+  const isAuthenticityVerified = hasAuthenticity && authenticityScorePercent > 80
+  const isVerifiedNgoReport =
+    isCitizenReport &&
+    (linkedReport?.tier === 3 ||
+      /verified|ngo/i.test(String(linkedReport?.reporter_trust ?? '')) ||
+      /verified|ngo/i.test(String(linkedReport?.role ?? '')))
+
+  const citizenDescription =
+    linkedReport?.description ?? t('alerts.citizenFallback')
+
   return (
     <article className="vr-interactive rounded-xl border border-[#e0e8e0] bg-white p-3 shadow-[0_1px_2px_rgba(13,40,28,0.06)]">
       <div className="flex items-center justify-between gap-2">
@@ -40,6 +64,29 @@ function AlertCard({
         />
       </div>
 
+      {(hasAuthenticity || isVerifiedNgoReport) ? (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {hasAuthenticity ? (
+            <span
+              className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                isAuthenticityVerified
+                  ? 'border-[#bae5c8] bg-[#eaf8ef] text-[#206544]'
+                  : 'border-[#f3d8a4] bg-[#fff7e7] text-[#8f5a04]'
+              }`}
+            >
+              {t('alerts.authenticity')}: {authenticityScorePercent}% ({isAuthenticityVerified ? t('alerts.verified') : t('alerts.potentialAi')})
+            </span>
+          ) : null}
+
+          {isVerifiedNgoReport ? (
+            <span className="rounded-full border border-[#deccff] bg-[#f4efff] px-2 py-0.5 text-[10px] font-semibold text-[#5d3faa]">
+              <BadgeCheck size={11} className="mr-1 inline" />
+              {t('alerts.verifiedNgo')}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="mt-2 grid grid-cols-[1fr_auto] gap-2">
         <div className="space-y-1 text-xs text-[#66736c]">
           <p className="flex items-center gap-1 font-medium text-[#30493f]">
@@ -54,6 +101,15 @@ function AlertCard({
           <p className="mt-1 font-semibold text-[#1f6e44]">{formatConfidence(flag.satellite_confidence)}</p>
         </div>
       </div>
+
+      {isCitizenReport ? (
+        <div className="mt-2 rounded-lg border border-[#e2e9e2] bg-[#f9fcf9] px-2.5 py-2">
+          <p className="text-xs text-[#465b51]">{citizenDescription}</p>
+          <p className="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-[#5d7068]">
+            <Mic size={12} /> {t('alerts.speechToText')}
+          </p>
+        </div>
+      ) : null}
 
       <div className="mt-2 text-xs text-[#69766f]">{formatDate(flag.created_at)}</div>
 

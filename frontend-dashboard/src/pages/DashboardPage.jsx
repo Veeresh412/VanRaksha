@@ -9,9 +9,11 @@ import ResolutionDonutCard from '../components/analytics/ResolutionDonutCard'
 import BacktestCard from '../components/analytics/BacktestCard'
 import DataOverviewCard from '../components/analytics/DataOverviewCard'
 import InsightModal from '../components/common/InsightModal'
+import { useAppLanguage } from '../hooks/useAppLanguage'
 
 function DashboardPage() {
   const navigate = useNavigate()
+  const { t } = useAppLanguage()
   const {
     visibleFlags,
     session,
@@ -22,6 +24,7 @@ function DashboardPage() {
   const {
     analytics,
     backtestSummary,
+    citizenReports,
     updateFlagStatus,
     escalateFlag,
     updateOfficerNote,
@@ -70,6 +73,70 @@ function DashboardPage() {
     }),
     [sortedFlags],
   )
+
+  const linkedReportsByFlagId = useMemo(() => {
+    const byFlagId = {}
+
+    citizenReports.forEach((report) => {
+      if (!report.linked_flag_id) return
+
+      const existingReport = byFlagId[report.linked_flag_id]
+
+      if (!existingReport) {
+        byFlagId[report.linked_flag_id] = report
+        return
+      }
+
+      const nextTier = Number(report.tier ?? 1)
+      const currentTier = Number(existingReport.tier ?? 1)
+
+      if (nextTier > currentTier) {
+        byFlagId[report.linked_flag_id] = report
+        return
+      }
+
+      const nextCreatedAt = new Date(report.created_at ?? 0).getTime()
+      const currentCreatedAt = new Date(existingReport.created_at ?? 0).getTime()
+
+      if (nextTier === currentTier && nextCreatedAt > currentCreatedAt) {
+        byFlagId[report.linked_flag_id] = report
+      }
+    })
+
+    return byFlagId
+  }, [citizenReports])
+
+  const sixMonthTrendBars = useMemo(
+    () => [
+      { month: 'Mar', heightClass: 'h-16' },
+      { month: 'Apr', heightClass: 'h-24' },
+      { month: 'May', heightClass: 'h-20' },
+      { month: 'Jun', heightClass: 'h-28' },
+      { month: 'Jul', heightClass: 'h-32' },
+      { month: 'Aug', heightClass: 'h-24' },
+    ],
+    [],
+  )
+
+  const predictedHotZones = useMemo(() => {
+    const fallbackNames = [
+      'Bajaag Gram Sabha',
+      'Chandpur Gram Sabha',
+      'Rampur Gram Sabha',
+    ]
+
+    const jurisdictionNames = jurisdictions
+      .map((jurisdiction) => jurisdiction.gram_sabha)
+      .filter(Boolean)
+
+    const names = fallbackNames.map((fallbackName, index) => jurisdictionNames[index] ?? fallbackName)
+
+    return [
+      { name: names[0], score: 88 },
+      { name: names[1], score: 74 },
+      { name: names[2], score: 61 },
+    ]
+  }, [jurisdictions])
 
   const handleSelectFlag = (flag) => {
     setSelectedFlagId(flag.flag_id)
@@ -170,12 +237,64 @@ function DashboardPage() {
               </div>
             </button>
           </div>
+
+          <section className="space-y-3">
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <h2 className="text-base font-semibold text-[#1a362b]">{t('dashboard.longTermTitle')}</h2>
+              <p className="text-xs text-[#63746b]">{t('dashboard.longTermSubtitle')}</p>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-2 xl:gap-5">
+              <div className="vr-card p-4">
+                <h3 className="text-sm font-semibold text-[#1e3b2f]">{t('dashboard.timelineTitle')}</h3>
+                <div className="mt-4 flex items-end gap-3">
+                  {sixMonthTrendBars.map((item) => (
+                    <div key={item.month} className="flex flex-1 flex-col items-center gap-2">
+                      <div
+                        className={`w-full max-w-[28px] rounded-t-md bg-gradient-to-t from-[#1f7a48] to-[#64b985] ${item.heightClass}`}
+                      />
+                      <span className="text-xs font-medium text-[#607067]">{item.month}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-3 text-xs text-[#66736c]">{t('dashboard.timelineNote')}</p>
+              </div>
+
+              <div className="vr-card p-4">
+                <h3 className="text-sm font-semibold text-[#1e3b2f]">{t('dashboard.hotZonesTitle')}</h3>
+                <div className="mt-3 space-y-3">
+                  {predictedHotZones.map((zone) => (
+                    <div key={zone.name} className="rounded-lg border border-[#e1e8e1] bg-[#fbfdfb] p-2.5">
+                      <div className="flex items-center justify-between gap-2 text-sm">
+                        <p className="font-medium text-[#234437]">{zone.name}</p>
+                        <span className="text-xs font-semibold text-[#40554b]">{zone.score}%</span>
+                      </div>
+                      <p className="mt-0.5 text-[11px] text-[#6b7a73]">{t('dashboard.vulnerability')}</p>
+                      <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-[#e8efe9]">
+                        <div
+                          className={`h-full rounded-full ${
+                            zone.score >= 85
+                              ? 'bg-[#e5534b]'
+                              : zone.score >= 70
+                                ? 'bg-[#f0ad3d]'
+                                : 'bg-[#2e9b5f]'
+                          }`}
+                          style={{ width: `${zone.score}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
         </div>
 
         <div className="space-y-4 xl:sticky xl:top-[88px] xl:self-start">
           <ActiveAlertsFeed
             flags={sortedFlags}
             jurisdictionsById={jurisdictionsById}
+            linkedReportsByFlagId={linkedReportsByFlagId}
             onSelectFlag={handleSelectFlag}
             onVerify={handleVerify}
             onReject={handleReject}
@@ -275,6 +394,7 @@ function DashboardPage() {
         open={drawerOpen}
         flag={selectedFlag}
         jurisdiction={selectedFlag ? jurisdictionsById[selectedFlag.jurisdiction_id] : null}
+        linkedReport={selectedFlag ? linkedReportsByFlagId[selectedFlag.flag_id] : null}
         role={session.role}
         onClose={() => setDrawerOpen(false)}
         onUnderReview={handleUnderReview}
