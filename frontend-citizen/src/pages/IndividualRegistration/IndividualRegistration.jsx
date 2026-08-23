@@ -1,15 +1,15 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   User,
   Mail,
-  Phone,
   MapPin,
   Lock,
 } from 'lucide-react';
 import Button from '../../components/common/Button';
 import { Input, Select } from '../../components/common/Input';
+import PhoneVerificationField from '../../components/registration/PhoneVerificationField';
 import { useAuth } from '../../hooks/useAuth';
 import { useTranslation } from '../../hooks/useTranslation';
 import { registerIndividual } from '../../services/api';
@@ -49,6 +49,7 @@ export default function IndividualRegistration() {
   const [errors, setErrors] = useState({});
   const [submitError, setSubmitError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [phoneVerified, setPhoneVerified] = useState(false);
 
   const updateField = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -56,6 +57,19 @@ export default function IndividualRegistration() {
       setErrors((prev) => ({ ...prev, [field]: '' }));
     }
   };
+
+  const handlePhoneVerifiedChange = useCallback((next) => {
+    setPhoneVerified(next);
+    if (next) {
+      setSubmitError('');
+      setErrors((prev) => {
+        if (!prev.phone) return prev;
+        const nextErrors = { ...prev };
+        delete nextErrors.phone;
+        return nextErrors;
+      });
+    }
+  }, []);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -67,6 +81,11 @@ export default function IndividualRegistration() {
       return;
     }
 
+    if (!phoneVerified) {
+      setSubmitError(t('registration.phoneVerifyRequired'));
+      return;
+    }
+
     setErrors({});
     setLoading(true);
 
@@ -75,6 +94,7 @@ export default function IndividualRegistration() {
         fullName: form.fullName.trim(),
         email: form.email.trim(),
         phone: form.phone.replace(/\D/g, ''),
+        phoneVerified: true,
         state: form.state,
         district: form.district.trim(),
         village: form.village.trim(),
@@ -141,15 +161,12 @@ export default function IndividualRegistration() {
               required
             />
 
-            <Input
-              label={t('registration.phone')}
-              type="tel"
-              icon={Phone}
-              placeholder={t('registration.phonePlaceholder')}
-              value={form.phone}
-              onChange={(e) => updateField('phone', e.target.value)}
-              error={formatFieldError(t, errors.phone)}
-              autoComplete="tel"
+            <PhoneVerificationField
+              phone={form.phone}
+              onPhoneChange={(value) => updateField('phone', value)}
+              phoneError={formatFieldError(t, errors.phone)}
+              verified={phoneVerified}
+              onVerifiedChange={handlePhoneVerifiedChange}
               required
             />
           </div>

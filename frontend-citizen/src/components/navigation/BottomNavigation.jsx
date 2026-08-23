@@ -13,7 +13,7 @@ export default function BottomNavigation() {
   };
 
   return (
-    <nav className="bottom-nav" aria-label="Main navigation">
+    <nav className="bottom-nav" aria-label={t('common.mainNavigation')}>
       <div className="bottom-nav__bar">
         <div className="bottom-nav__side bottom-nav__side--start">
           <NavLink

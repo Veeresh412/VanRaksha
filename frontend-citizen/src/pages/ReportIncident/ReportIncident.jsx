@@ -5,9 +5,9 @@ import { useTranslation } from '../../hooks/useTranslation';
 import { translateErrorMessage } from '../../utils/i18nHelpers';
 import Header from '../../components/common/Header';
 import Button from '../../components/common/Button';
-import { TextArea } from '../../components/common/Input';
 import EvidenceUploader from '../../components/reports/EvidenceUploader';
 import LocationCard from '../../components/reports/LocationCard';
+import ObservationSpeechField from '../../components/reports/ObservationSpeechField';
 import { submitReport } from '../../services/reportService';
 import './ReportIncident.css';
 
@@ -91,7 +91,7 @@ export default function ReportIncident() {
         {error && <div className="report-incident-page__error">{error}</div>}
 
         <div className="report-incident-page__section">
-          <TextArea
+          <ObservationSpeechField
             label={t('report.whatObserved')}
             value={description}
             onChange={(e) => setDescription(e.target.value)}

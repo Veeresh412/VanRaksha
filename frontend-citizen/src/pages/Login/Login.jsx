@@ -1,11 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, UserPlus, TreePine } from 'lucide-react';
+import { Mail, Lock, UserPlus, TreePine, Phone } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useTranslation } from '../../hooks/useTranslation';
 import { translateErrorMessage } from '../../utils/i18nHelpers';
 import Button from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
+import OtpInput from '../../components/auth/OtpInput';
+import {
+  DEMO_OTP,
+  OTP_LENGTH,
+  RESEND_COOLDOWN_SECONDS,
+  isDemoOtpMode,
+  isValidIndianMobile,
+  normalizePhone,
+  requestOtp,
+  resendOtp,
+  verifyOtp,
+} from '../../services/otpService';
 import './Login.css';
 
 function ForestSilhouette() {
@@ -18,16 +30,122 @@ function ForestSilhouette() {
   );
 }
 
+function translateOtpError(t, message) {
+  if (!message) return '';
+  if (message.startsWith('otp.')) return t(message);
+  return translateErrorMessage(t, message);
+}
+
 export default function Login() {
-  const { login } = useAuth();
+  const { login, loginWithPhone } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation();
+
+  const [method, setMethod] = useState('phone');
+  const [step, setStep] = useState('credentials');
+
+  const [phone, setPhone] = useState('');
+  const [otp, setOtp] = useState('');
+  const [demoHint, setDemoHint] = useState(null);
+  const [resendSeconds, setResendSeconds] = useState(0);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
+  useEffect(() => {
+    if (resendSeconds <= 0) return undefined;
+    const timer = setInterval(() => {
+      setResendSeconds((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendSeconds]);
+
+  const startResendCooldown = useCallback(() => {
+    setResendSeconds(RESEND_COOLDOWN_SECONDS);
+  }, []);
+
+  const handlePhoneSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    const normalized = normalizePhone(phone);
+    if (!normalized) {
+      setError(t('otp.phoneRequired'));
+      return;
+    }
+    if (!isValidIndianMobile(normalized)) {
+      setError(t('otp.phoneInvalid'));
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await requestOtp(normalized);
+      setPhone(normalized);
+      setOtp('');
+      setDemoHint(result.demoOtp);
+      setStep('otp');
+      startResendCooldown();
+    } catch (err) {
+      setError(translateOtpError(t, err.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOtpVerify = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (!otp) {
+      setError(t('otp.otpRequired'));
+      return;
+    }
+    if (otp.length < OTP_LENGTH) {
+      setError(t('otp.otpIncomplete'));
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await verifyOtp(phone, otp);
+      await loginWithPhone(phone);
+      navigate('/');
+    } catch (err) {
+      setError(translateOtpError(t, err.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (resendSeconds > 0 || loading) return;
+    setError('');
+    setLoading(true);
+    try {
+      const result = await resendOtp(phone);
+      setOtp('');
+      setDemoHint(result.demoOtp);
+      startResendCooldown();
+    } catch (err) {
+      setError(translateOtpError(t, err.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChangePhone = () => {
+    setStep('credentials');
+    setOtp('');
+    setError('');
+    setDemoHint(null);
+    setResendSeconds(0);
+  };
+
+  const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
@@ -45,6 +163,15 @@ export default function Login() {
     alert(t('login.forgotPasswordAlert'));
   };
 
+  const switchMethod = (next) => {
+    setMethod(next);
+    setStep('credentials');
+    setError('');
+    setOtp('');
+    setDemoHint(null);
+    setResendSeconds(0);
+  };
+
   return (
     <div className="login-page">
       <div className="login-page__hero">
@@ -58,47 +185,136 @@ export default function Login() {
 
       <div className="login-page__form">
         <div className="login-page__card">
-          <form onSubmit={handleSubmit}>
-            {error && <div className="login-page__error">{error}</div>}
+          {step === 'credentials' && (
+            <div className="login-page__tabs" role="tablist" aria-label={t('login.methodLabel')}>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={method === 'phone'}
+                className={`login-page__tab ${method === 'phone' ? 'login-page__tab--active' : ''}`}
+                onClick={() => switchMethod('phone')}
+              >
+                {t('login.methodPhone')}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={method === 'password'}
+                className={`login-page__tab ${method === 'password' ? 'login-page__tab--active' : ''}`}
+                onClick={() => switchMethod('password')}
+              >
+                {t('login.methodPassword')}
+              </button>
+            </div>
+          )}
 
-            <Input
-              label={t('login.emailOrOrgId')}
-              type="text"
-              icon={Mail}
-              placeholder={t('login.emailOrOrgIdPlaceholder')}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="username"
-            />
+          {error && <div className="login-page__error">{error}</div>}
 
-            <Input
-              label={t('login.password')}
-              type="password"
-              icon={Lock}
-              placeholder={t('login.passwordPlaceholder')}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoComplete="current-password"
-            />
+          {step === 'otp' ? (
+            <form onSubmit={handleOtpVerify}>
+              <p className="login-page__otp-heading">{t('otp.enterOtp')}</p>
+              <p className="login-page__otp-sent">
+                {t('otp.sentTo', { phone })}
+              </p>
 
-            <Button type="submit" disabled={loading}>
-              {loading ? t('common.signingIn') : t('common.signIn')}
-            </Button>
-          </form>
+              {isDemoOtpMode() && demoHint && (
+                <p className="login-page__demo-otp" role="status">
+                  {t('otp.demoHint', { otp: demoHint || DEMO_OTP })}
+                </p>
+              )}
 
-          <div className="login-page__forgot">
-            <Button variant="ghost" onClick={handleForgotPassword}>
-              {t('login.forgotPassword')}
-            </Button>
-          </div>
+              <OtpInput
+                value={otp}
+                onChange={setOtp}
+                disabled={loading}
+                error={Boolean(error)}
+                ariaLabelPrefix={t('otp.digitLabel')}
+              />
+
+              <Button type="submit" disabled={loading}>
+                {loading ? t('otp.verifying') : t('otp.verify')}
+              </Button>
+
+              <div className="login-page__otp-actions">
+                <button
+                  type="button"
+                  className="login-page__link-btn"
+                  onClick={handleResend}
+                  disabled={loading || resendSeconds > 0}
+                >
+                  {resendSeconds > 0
+                    ? t('otp.resendIn', { seconds: resendSeconds })
+                    : t('otp.resend')}
+                </button>
+                <button
+                  type="button"
+                  className="login-page__link-btn"
+                  onClick={handleChangePhone}
+                  disabled={loading}
+                >
+                  {t('otp.changePhone')}
+                </button>
+              </div>
+            </form>
+          ) : method === 'phone' ? (
+            <form onSubmit={handlePhoneSubmit}>
+              <Input
+                label={t('login.phone')}
+                type="tel"
+                icon={Phone}
+                placeholder={t('login.phonePlaceholder')}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                autoComplete="tel"
+                inputMode="numeric"
+              />
+              <Button type="submit" disabled={loading}>
+                {loading ? t('otp.sending') : t('otp.sendOtp')}
+              </Button>
+            </form>
+          ) : (
+            <form onSubmit={handlePasswordSubmit}>
+              <Input
+                label={t('login.emailOrOrgId')}
+                type="text"
+                icon={Mail}
+                placeholder={t('login.emailOrOrgIdPlaceholder')}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="username"
+              />
+
+              <Input
+                label={t('login.password')}
+                type="password"
+                icon={Lock}
+                placeholder={t('login.passwordPlaceholder')}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+              />
+
+              <Button type="submit" disabled={loading}>
+                {loading ? t('common.signingIn') : t('common.signIn')}
+              </Button>
+
+              <div className="login-page__forgot">
+                <Button variant="ghost" onClick={handleForgotPassword}>
+                  {t('login.forgotPassword')}
+                </Button>
+              </div>
+            </form>
+          )}
         </div>
 
-        <Button variant="outline" as={Link} to="/register">
-          <UserPlus size={18} />
-          {t('login.createAccount')}
-        </Button>
+        {step === 'credentials' && (
+          <Button variant="outline" as={Link} to="/register">
+            <UserPlus size={18} />
+            {t('login.createAccount')}
+          </Button>
+        )}
       </div>
     </div>
   );

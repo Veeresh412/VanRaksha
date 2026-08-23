@@ -4,6 +4,7 @@
  */
 
 import { mapBackendReportResponse } from '../utils/reportBuilder';
+
 import { apiRequest } from './api';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
@@ -21,7 +22,12 @@ export async function createReportViaApi(reportData, user) {
       lng: reportData.longitude,
       description: reportData.description,
       reporter_type: 'citizen',
-      tier: 1,
+      tier: Number(
+        user?.trustStatus?.trustTier ??
+        user?.tier ??
+        user?.verificationTier ??
+        (user?.accountType === 'organization' ? 3 : 1)
+      ),
       authenticity_score: 0,
     }),
   });

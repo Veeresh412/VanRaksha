@@ -1,0 +1,96 @@
+.phone-verification {
+  margin-bottom: var(--space-lg);
+}
+
+.phone-verification .input-group {
+  margin-bottom: var(--space-sm);
+}
+
+.phone-verification__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-md);
+}
+
+.phone-verification__actions .btn {
+  width: auto;
+  min-width: 140px;
+}
+
+.phone-verification__otp-panel {
+  margin-top: var(--space-sm);
+  padding: var(--space-md);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.phone-verification__sent {
+  margin: 0 0 var(--space-xs);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.phone-verification__otp-label {
+  margin: 0 0 var(--space-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text);
+  text-align: center;
+}
+
+.phone-verification__demo-hint {
+  margin: 0 0 var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  background: var(--color-verified-bg, #e8f5e9);
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  text-align: center;
+  font-weight: 500;
+}
+
+.phone-verification__error {
+  margin: 0 0 var(--space-md);
+  font-size: var(--font-size-xs);
+  color: #b91c1c;
+  text-align: center;
+}
+
+.phone-verification__resend {
+  display: block;
+  width: 100%;
+  margin-top: var(--space-md);
+  border: none;
+  background: none;
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  min-height: 40px;
+}
+
+.phone-verification__resend:disabled {
+  color: var(--color-text-muted);
+  cursor: default;
+}
+
+.phone-verification__verified-btn {
+  gap: var(--space-xs);
+  color: var(--color-primary);
+}
+
+.phone-verification__verified {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  background: var(--color-verified-bg, #e8f5e9);
+  color: var(--color-verified-text, var(--color-primary));
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}

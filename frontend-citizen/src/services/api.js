@@ -234,6 +234,7 @@ export async function registerIndividual(payload) {
     name: payload.fullName.trim(),
     email: payload.email.trim(),
     phone: payload.phone,
+    phoneVerified: payload.phoneVerified === true,
     state: payload.state,
     district: payload.district,
     village: payload.village,

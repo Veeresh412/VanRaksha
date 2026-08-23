@@ -42,7 +42,7 @@ export default function Profile() {
 
   return (
     <div className="profile-page">
-      <Header title={t('profile.title')} />
+      <Header title={t('profile.title')} showLanguage />
 
       <div className="profile-page__body">
         <section className="profile-page__identity card">
@@ -134,7 +134,11 @@ export default function Profile() {
             />
             <ProfileInfoRow
               label={t('profile.organizationType')}
-              value={displayValue(user?.organizationType)}
+              value={
+                user?.organizationType
+                  ? t(`registration.orgTypes.${user.organizationType}`)
+                  : t('common.notAvailable')
+              }
             />
             <ProfileInfoRow
               label={t('profile.contactPerson')}

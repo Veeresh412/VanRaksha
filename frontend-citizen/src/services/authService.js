@@ -5,6 +5,7 @@
 
 import {
   findDemoUser,
+  findDemoUserByPhone,
   toDemoSessionUser,
 } from '../data/demoData';
 import {
@@ -47,6 +48,48 @@ export async function login(identifier, password) {
   }
 
   const user = buildSessionUserFromLogin(identifier);
+  saveSession(user);
+  return { token: getStoredToken(), user };
+}
+
+/**
+ * Complete login after phone OTP verification.
+ * Prefer matching a demo/registered user by phone; otherwise create a citizen session.
+ */
+export async function loginWithVerifiedPhone(phone) {
+  const digits = String(phone || '').replace(/\D/g, '').slice(-10);
+
+  const demoUser = findDemoUserByPhone(digits);
+  if (demoUser) {
+    const user = {
+      ...toDemoSessionUser(demoUser),
+      phone: digits,
+      phoneVerified: true,
+    };
+    saveSession(user);
+    return { token: getStoredToken(), user };
+  }
+
+  const registered = findRegisteredUser(digits);
+  if (registered) {
+    const user = {
+      ...toSessionUser(registered),
+      phone: digits,
+      phoneVerified: true,
+    };
+    saveSession(user);
+    return { token: getStoredToken(), user };
+  }
+
+  const user = {
+    id: `phone-${digits}`,
+    accountType: 'individual',
+    name: `Citizen ${digits.slice(-4)}`,
+    email: '',
+    phone: digits,
+    phoneVerified: true,
+    verified: false,
+  };
   saveSession(user);
   return { token: getStoredToken(), user };
 }

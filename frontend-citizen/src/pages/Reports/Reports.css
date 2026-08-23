@@ -10,6 +10,12 @@
   padding-bottom: var(--space-md);
 }
 
+.reports-page__language {
+  display: flex;
+  justify-content: center;
+  padding: 0 var(--space-lg) var(--space-sm);
+}
+
 .reports-page__filter-btn {
   display: flex;
   align-items: center;

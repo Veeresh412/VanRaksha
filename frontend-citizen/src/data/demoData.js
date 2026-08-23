@@ -298,6 +298,12 @@ export function findDemoUser(identifier, password) {
   );
 }
 
+export function findDemoUserByPhone(phone) {
+  const digits = String(phone || '').replace(/\D/g, '').slice(-10);
+  if (!digits) return null;
+  return DEMO_USERS.find((user) => user.phone === digits) ?? null;
+}
+
 export function toDemoSessionUser(user) {
   const session = { ...user };
   delete session.password;

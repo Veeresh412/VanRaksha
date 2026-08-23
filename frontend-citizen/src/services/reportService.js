@@ -5,21 +5,27 @@
  */
 
 import { getStoredUser } from './api';
+
 import {
   cacheLocalReport,
   getLocalReportById,
   getLocalReports,
   submitReportLocally,
 } from './localReportStore';
+
 import { createReportViaApi, isApiConfigured } from './reportApi';
+
 import { getDemoReportById, getDemoReportsForUser } from '../data/demoData';
+
 import { buildMockNotifications } from '../data/notificationMock';
+
 import { isBackendUnavailableError } from '../utils/networkErrors';
 
 function mergeReports(localReports, demoReports, filters = {}) {
   const byId = new Map();
 
   localReports.forEach((report) => byId.set(report.id, report));
+
   demoReports.forEach((report) => {
     if (!byId.has(report.id)) {
       byId.set(report.id, report);
@@ -39,7 +45,9 @@ function mergeReports(localReports, demoReports, filters = {}) {
 
 function getDemoReportsForCurrentUser() {
   const user = getStoredUser();
+
   if (!user?.isDemo) return [];
+
   return getDemoReportsForUser(user.id);
 }
 
@@ -59,11 +67,13 @@ export async function getReportById(id) {
     return getLocalReportById(id);
   } catch (error) {
     const user = getStoredUser();
+
     if (!user?.isDemo) {
       throw error;
     }
 
     const demoReport = getDemoReportById(id);
+
     if (demoReport && demoReport.userId === user.id) {
       return demoReport;
     }
@@ -74,6 +84,7 @@ export async function getReportById(id) {
 
 export async function getRecentReports(limit = 3) {
   const reports = await getReports();
+
   return reports.slice(0, limit);
 }
 
@@ -81,13 +92,25 @@ export async function submitReport(reportData) {
   if (isApiConfigured()) {
     try {
       const user = getStoredUser();
-      const report = await createReportViaApi(reportData, user);
+
+      // Use the logged-in user's actual tier.
+      // Supports Tier 1, Tier 2, and Tier 3.
+      const report = await createReportViaApi(
+        {
+          ...reportData,
+          tier: user.accountType === 'organization' ? 3 : 1,
+        },
+        user
+      );
+
       cacheLocalReport(report);
+
       return report;
     } catch (error) {
       if (isBackendUnavailableError(error)) {
         return submitReportLocally(reportData);
       }
+
       throw error;
     }
   }
@@ -97,6 +120,7 @@ export async function submitReport(reportData) {
 
 export async function getNotifications() {
   const reports = await getReports();
+
   return buildMockNotifications(reports);
 }
 

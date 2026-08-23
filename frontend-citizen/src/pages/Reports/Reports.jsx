@@ -6,6 +6,7 @@ import { getReports } from '../../services/reportService';
 import { getStatusCounts } from '../../utils/statusUtils';
 import ReportCard from '../../components/reports/ReportCard';
 import EmptyState from '../../components/common/EmptyState';
+import HeaderLanguagePicker from '../../components/layout/HeaderLanguagePicker';
 import './Reports.css';
 
 const FILTER_VALUES = ['all', 'processing', 'under_review', 'submitted', 'resolved'];
@@ -50,7 +51,7 @@ export default function Reports() {
     return () => {
       cancelled = true;
     };
-  }, [filter]);
+  }, [filter, location.key]);
 
   const counts = getStatusCounts(allReports);
 
@@ -67,6 +68,10 @@ export default function Reports() {
         >
           <Filter size={20} />
         </button>
+      </div>
+
+      <div className="reports-page__language">
+        <HeaderLanguagePicker />
       </div>
 
       <div className="reports-page__summary">

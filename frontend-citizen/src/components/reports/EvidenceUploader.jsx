@@ -90,7 +90,7 @@ export default function EvidenceUploader({ photos, videos, onPhotosChange, onVid
                 type="button"
                 className="evidence-uploader__remove"
                 onClick={() => removePhoto(photo.id)}
-                aria-label={`Remove ${photo.name}`}
+                aria-label={t('common.removeFile', { name: photo.name })}
               >
                 <X size={18} />
               </button>
@@ -109,7 +109,7 @@ export default function EvidenceUploader({ photos, videos, onPhotosChange, onVid
                 type="button"
                 className="evidence-uploader__remove"
                 onClick={() => removeVideo(video.id)}
-                aria-label={`Remove ${video.name}`}
+                aria-label={t('common.removeFile', { name: video.name })}
               >
                 <X size={18} />
               </button>

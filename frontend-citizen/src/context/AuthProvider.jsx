@@ -20,6 +20,12 @@ export default function AuthProvider({ children }) {
     return result;
   }, []);
 
+  const loginWithPhone = useCallback(async (phone) => {
+    const result = await authService.loginWithVerifiedPhone(phone);
+    setAuthState({ user: result.user, loading: false });
+    return result;
+  }, []);
+
   const logout = useCallback(async () => {
     await authService.logout();
     setAuthState({ user: null, loading: false });
@@ -31,9 +37,10 @@ export default function AuthProvider({ children }) {
       loading,
       isAuthenticated: !!user,
       login,
+      loginWithPhone,
       logout,
     }),
-    [user, loading, login, logout]
+    [user, loading, login, loginWithPhone, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

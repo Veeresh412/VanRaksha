@@ -11,6 +11,30 @@
   z-index: 50;
 }
 
+.header-block {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.header-block .header {
+  position: relative;
+  top: auto;
+}
+
+.header-block__language {
+  display: flex;
+  justify-content: center;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border-light);
+  padding: 0 var(--space-md);
+}
+
+.header-block__language--green {
+  background: var(--color-primary);
+  border-bottom-color: rgba(255, 255, 255, 0.12);
+}
+
 .header--green {
   background: var(--color-primary);
   border-bottom: none;

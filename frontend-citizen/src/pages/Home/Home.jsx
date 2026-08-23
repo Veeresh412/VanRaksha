@@ -18,7 +18,7 @@ export default function Home() {
 
   return (
     <div className="home-page">
-      <Header showMenu showNotification title={t('brand.name')} />
+      <Header showMenu showNotification showLanguage title={t('brand.name')} />
 
       <div className="home-page__greeting">
         <p className="home-page__greeting-text">

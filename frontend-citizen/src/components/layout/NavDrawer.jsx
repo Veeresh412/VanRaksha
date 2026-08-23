@@ -24,7 +24,7 @@ export default function NavDrawer({ open, onClose, onOpenInfo, onLogout }) {
         aria-label={t('common.closeMenu')}
       />
 
-      <aside className="nav-drawer__panel" aria-label="Navigation menu">
+      <aside className="nav-drawer__panel" aria-label={t('common.navigationMenu')}>
         <div className="nav-drawer__header">
           <div>
             <p className="nav-drawer__brand">{t('brand.name')}</p>

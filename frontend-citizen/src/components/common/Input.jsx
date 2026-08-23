@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
+import { useTranslation } from '../../hooks/useTranslation';
 import './Input.css';
 
 export function Input({
@@ -10,6 +11,7 @@ export function Input({
   className = '',
   ...props
 }) {
+  const { t } = useTranslation();
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === 'password';
   const inputType = isPassword && showPassword ? 'text' : type;
@@ -39,7 +41,7 @@ export function Input({
             type="button"
             className="input-group__toggle"
             onClick={() => setShowPassword(!showPassword)}
-            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            aria-label={showPassword ? t('common.hidePassword') : t('common.showPassword')}
           >
             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
