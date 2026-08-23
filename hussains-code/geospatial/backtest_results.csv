@@ -1,0 +1,11 @@
+event_id,location,known_change_type,date,detected,confidence_score,ndvi_delta,ndbi_delta,notes
+EVT_MBJ_001,"Similipal Boundary Rd (21.9124, 86.2105)",Road Widening / Tree Clearing,2026-05-15,yes,0.37,-0.28,0.21,Caught — large NDVI drop consistent with forest clearing
+EVT_MBJ_002,"Baripada Buffer Zone (21.9482, 86.7314)",New Built-up Structure,2026-06-02,yes,0.2,-0.22,0.16,Caught — new built-up signature (NDBI rise > 0.10)
+EVT_MBJ_003,"Rairangpur CFR Fringe (22.2580, 86.1620)",Stone Quarry Extension,2026-06-20,yes,0.59,-0.35,0.28,Caught — severe vegetation loss near CFR boundary
+EVT_MBJ_004,"Jasipur CFR Forest Edge (21.9050, 86.2180)",Forest Clearing,2026-07-04,yes,0.45,-0.3,0.24,Caught — dual NDVI drop + NDBI rise within 500m buffer
+EVT_MBJ_005,"Udala Block Boundary (21.5720, 86.5680)",Commercial Brick Kiln,2026-07-18,yes,0.31,-0.26,0.19,Caught — dual threshold satisfied near title land
+CTRL_MBJ_001,"Dense Forest Core (21.9250, 86.3500)",None (Control),2026-06-01,no,0.0,-0.04,-0.02,Correctly ignored — control site with no change
+CTRL_MBJ_002,"Protected CFR Reserve (21.9520, 86.7450)",None (Control),2026-06-15,no,0.0,-0.08,0.01,Correctly ignored — protected reserve stable
+CTRL_MBJ_003,"Water Reservoir Fringe (22.2400, 86.1800)",Seasonal Water Fluctuations,2026-07-01,no,0.0,-0.16,-0.05,Correctly ignored — seasonal vegetation drop without NDBI rise
+CTRL_MBJ_004,"Agriculture Land (21.8500, 86.6200)",Crop Harvesting (Seasonal),2026-07-10,no,0.0,-0.18,0.03,Correctly ignored — crop harvest rejected by NDBI threshold (< 0.10)
+CTRL_MBJ_005,"Remote Forest Interior (21.9800, 86.4000)",None (Control),2026-07-25,no,0.0,-0.02,-0.01,Correctly ignored — stable interior forest

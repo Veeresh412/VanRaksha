@@ -1,0 +1,104 @@
+.verification-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.verification-badge--checking {
+  background: var(--color-status-processing-bg);
+  color: var(--color-status-processing-text);
+  border-color: var(--color-status-processing-border);
+}
+
+.verification-badge--verified {
+  background: var(--color-verified-bg);
+  color: var(--color-verified-text);
+  border-color: var(--color-status-review-border);
+}
+
+.verification-badge--failed {
+  background: #fef2f2;
+  color: #991b1b;
+  border-color: #fecaca;
+}
+
+.verification-badge--pending {
+  background: var(--color-surface-muted);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
+}
+
+.trust-tier-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-status-review-border);
+  background: var(--color-verified-bg);
+  color: var(--color-verified-text);
+}
+
+.trust-tier-badge--tier-1 {
+  background: var(--color-surface-muted);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
+}
+
+.trust-tier-badge--tier-2 {
+  background: var(--color-status-submitted-bg);
+  color: var(--color-status-submitted-text);
+  border-color: var(--color-status-submitted-border);
+}
+
+.trust-tier-badge--tier-3 {
+  background: var(--color-verified-bg);
+  color: var(--color-verified-text);
+  border-color: var(--color-status-review-border);
+}
+
+.trust-tier-badge--unassigned {
+  background: var(--color-surface-muted);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
+}
+
+.verification-badge--processing {
+  background: var(--color-status-processing-bg);
+  color: var(--color-status-processing-text);
+  border-color: var(--color-status-processing-border);
+}
+
+.corroboration-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+}
+
+.corroboration-badge--awaiting {
+  background: var(--color-surface-muted);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
+}
+
+.corroboration-badge--partial {
+  background: var(--color-status-processing-bg);
+  color: var(--color-status-processing-text);
+  border-color: var(--color-status-processing-border);
+}
+
+.corroboration-badge--corroborated {
+  background: var(--color-verified-bg);
+  color: var(--color-verified-text);
+  border-color: var(--color-status-review-border);
+}

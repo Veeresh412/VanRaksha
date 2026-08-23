@@ -1,0 +1,106 @@
+.evidence-uploader__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.evidence-uploader__box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: var(--space-xl) var(--space-md);
+  border: 1.5px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+  min-height: 100px;
+}
+
+.evidence-uploader__box:hover {
+  border-color: var(--color-primary);
+}
+
+.evidence-uploader__box input {
+  display: none;
+}
+
+.evidence-uploader__icon {
+  color: var(--color-text-muted);
+}
+
+.evidence-uploader__label {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.evidence-uploader__files {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+
+.evidence-uploader__file {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+}
+
+.evidence-uploader__thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  object-fit: cover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.evidence-uploader__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.evidence-uploader__name {
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.evidence-uploader__meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.evidence-uploader__status {
+  display: inline-block;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-top: var(--space-xs);
+}
+
+.evidence-uploader__remove {
+  color: var(--color-text-muted);
+  padding: var(--space-xs);
+  display: flex;
+}
+
+.evidence-uploader__remove:hover {
+  color: #b91c1c;
+}

@@ -11,6 +11,15 @@ import engine
 
 
 
+from pydantic import BaseModel
+
+class AuthOTPRequest(BaseModel):
+    phone_number: str
+
+class AuthOTPVerify(BaseModel):
+    phone_number: str
+    otp: str
+
 app = FastAPI(title="VanRaksha API", version="2.0.0")
 
 # --- CORS (For local frontend testing) ---
@@ -21,6 +30,27 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# --- AUTH (MOCK FOR DEMO) ---
+@app.post("/auth/request-otp")
+def request_otp(data: AuthOTPRequest):
+    return {"success": True, "message": "OTP sent successfully.", "dev_otp": "123456"}
+
+@app.post("/auth/verify-otp")
+def verify_otp(data: AuthOTPVerify):
+    if data.otp != "123456":
+        return {"success": False, "error": "Invalid OTP"}
+    return {
+        "success": True,
+        "access_token": "demo-live-token",
+        "token_type": "bearer",
+        "user": {
+            "user_id": "admin_001",
+            "name": "Live Admin",
+            "role": "admin",
+            "phone_number": data.phone_number
+        }
+    }
 
 # --- REPORTS ---
 @app.post("/reports", response_model=schemas.ReportResponse)
@@ -130,7 +160,6 @@ def clear_test_data(db: Session = Depends(database.get_db)):
     db.query(models.Report).delete()
     db.query(models.SatellitePing).delete()
     db.query(models.Flag).delete()
-    db.query(models.FRAParcel).delete()
     db.commit()
     return {"message": "All data cleared successfully."}
 

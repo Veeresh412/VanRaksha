@@ -1,0 +1,65 @@
+.location-card__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: 12px 20px;
+  min-height: 48px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  transition: border-color var(--transition-fast);
+  margin-bottom: var(--space-md);
+}
+
+.location-card__btn:hover {
+  border-color: var(--color-primary);
+}
+
+.location-card__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.location-card__captured {
+  padding: var(--space-lg);
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+}
+
+.location-card__status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-primary);
+  margin-bottom: var(--space-md);
+}
+
+.location-card__coords {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.location-card__coord {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.location-card__coord strong {
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.location-card__error {
+  font-size: var(--font-size-sm);
+  color: #b91c1c;
+  margin-top: var(--space-sm);
+}
