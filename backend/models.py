@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, Boolean, DateTime, Enum as SQLEnum, JSON
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Boolean, Enum as SQLEnum, JSON
+from geoalchemy2 import Geometry
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from database import Base
@@ -10,7 +11,7 @@ class FRAParcel(Base):
     id = Column(String, primary_key=True)
     title_holder_type = Column(String)
     is_synthetic = Column(Boolean, default=True)
-    boundary = Column(JSON)
+    boundary = Column(Geometry('POLYGON', srid=4326))
 
     flags = relationship("Flag", back_populates="fra_parcel")
 

@@ -1,51 +1,44 @@
 import json
 import os
-from database import SessionLocal, engine
-import models
+from sqlalchemy.orm import Session
+from shapely.geometry import shape
+from database import SessionLocal
+from models import FRAParcel
 
-def seed_parcels():
-    # Make sure tables exist before seeding
-    models.Base.metadata.create_all(bind=engine)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+GEOJSON_PATH = os.path.abspath(os.path.join(BASE_DIR, "../../VanRaksha_Hussain/geospatial/data/fra_parcels_demo.geojson"))
+
+def seed():
+    db: Session = SessionLocal()
     
-    file_path = "fra_parcels_demo.geojson"
-    if not os.path.exists(file_path):
-        print(f"Error: Could not find '{file_path}'. Please make sure Person 1 sends it to you and you place it in the backend folder!")
+    if not os.path.exists(GEOJSON_PATH):
+        print(f"Error: GeoJSON file not found at {GEOJSON_PATH}")
         return
 
-    with open(file_path, 'r') as f:
+    with open(GEOJSON_PATH, "r") as f:
         data = json.load(f)
-
-    db = SessionLocal()
     
-    count = 0
-    for feature in data.get("features", []):
+    features = data.get("features", [])
+    
+    for feature in features:
         props = feature.get("properties", {})
-        geometry = feature.get("geometry", {})
+        geom = feature.get("geometry")
         
-        # Extract the string ID from either the feature root or properties
-        parcel_id = props.get("id") or feature.get("id")
-        title_holder_type = props.get("title_holder_type", "Gram Sabha")
-        is_synthetic = props.get("is_synthetic", True)
+        # Convert GeoJSON geometry to Shapely shape, then to WKT format that GeoAlchemy2 accepts
+        s_geom = shape(geom)
+        wkt_geom = f"SRID=4326;{s_geom.wkt}"
         
-        if not parcel_id:
-            print("Warning: Found a feature with no ID, skipping...")
-            continue
-            
-        # Check if it already exists so we don't duplicate
-        existing = db.query(models.FRAParcel).filter(models.FRAParcel.id == parcel_id).first()
-        if not existing:
-            new_parcel = models.FRAParcel(
-                id=parcel_id,
-                title_holder_type=title_holder_type,
-                is_synthetic=is_synthetic,
-                boundary=geometry
-            )
-            db.add(new_parcel)
-            count += 1
-            
+        parcel = FRAParcel(
+            id=props.get("fra_parcel_id"),
+            title_holder_type=props.get("title_holder_type"),
+            is_synthetic=props.get("is_synthetic", True),
+            boundary=wkt_geom
+        )
+        db.merge(parcel)
+    
     db.commit()
+    print(f"Successfully seeded {len(features)} FRA parcels with Spatial Geometry into the database!")
     db.close()
-    print(f"Success! Inserted {count} new FRA parcels into the database.")
 
 if __name__ == "__main__":
-    seed_parcels()
+    seed()

@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List
 import os
@@ -11,6 +12,15 @@ import engine
 
 
 app = FastAPI(title="VanRaksha API", version="2.0.0")
+
+# --- CORS (For local frontend testing) ---
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], 
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # --- REPORTS ---
 @app.post("/reports", response_model=schemas.ReportResponse)

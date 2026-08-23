@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 import models
 import schemas
 import math
+from sqlalchemy import func
 
 # Earth radius in meters
 R = 6371e3 
@@ -24,6 +25,14 @@ def get_reporter_trust_from_tier(tier: int) -> str:
     if tier == 3: return "Verified Reporter"
     if tier == 2: return "Geo-tagged Reporter"
     return "Basic Reporter"
+
+def assign_fra_parcel(db: Session, lat: float, lng: float):
+    # PostGIS Spatial Query: Does this GPS coordinate fall inside any forest map polygon?
+    point = func.ST_SetSRID(func.ST_MakePoint(lng, lat), 4326)
+    parcel = db.query(models.FRAParcel).filter(func.ST_Contains(models.FRAParcel.boundary, point)).first()
+    if parcel:
+        return parcel.id
+    return None
 
 def process_report_corroboration(db: Session, new_report: models.Report):
     NEARBY_RADIUS_METERS = 500
@@ -115,12 +124,15 @@ def create_or_update_flag(db: Session, lat: float, lng: float, signal_type: sche
         target_flag.source = source
         target_flag.signal_type = signal_type
     else:
+        fra_id = assign_fra_parcel(db, lat, lng)
+        
         target_flag = models.Flag(
             lat=lat,
             lng=lng,
             signal_type=signal_type,
             source=source,
-            corroboration_state=corroboration_state
+            corroboration_state=corroboration_state,
+            fra_parcel_id=fra_id
         )
         db.add(target_flag)
         db.commit()
