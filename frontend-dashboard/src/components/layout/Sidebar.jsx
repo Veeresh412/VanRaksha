@@ -31,7 +31,7 @@ function Sidebar({ session, analytics, open, onClose, onOpenHelp, onOpenFeedback
       icon: ClipboardList,
       badge: analytics.citizenReports,
     },
-    { label: 'Model Backtesting', path: '/backtesting', icon: BarChart3 },
+    { label: 'Accuracy Trend', path: '/backtesting', icon: BarChart3 },
     { label: 'Admin Settings', path: '/settings', icon: Settings },
     { label: 'Users & Roles', path: '/users', icon: Users },
   ]
@@ -68,7 +68,7 @@ function Sidebar({ session, analytics, open, onClose, onOpenHelp, onOpenFeedback
       icon: ClipboardList,
       badge: analytics.citizenReports,
     },
-    { label: 'Model Backtesting', path: '/backtesting', icon: BarChart3 },
+    { label: 'Accuracy Trend', path: '/backtesting', icon: BarChart3 },
   ]
 
   const navItems =

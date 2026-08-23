@@ -27,7 +27,7 @@ function ModelBacktestingPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Model Backtesting"
+        title="Accuracy Trend"
         subtitle="Historical validation overview from seeded event records"
       />
 
