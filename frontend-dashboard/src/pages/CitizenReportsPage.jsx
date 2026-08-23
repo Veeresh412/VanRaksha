@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { BadgeCheck, Mic, ShieldCheck } from 'lucide-react'
+import { BadgeCheck, ShieldCheck } from 'lucide-react'
 import { useAppData } from '../contexts/AppDataContext'
 import { useDashboardContext } from '../hooks/useDashboardContext'
 import PageHeader from '../components/common/PageHeader'
@@ -53,7 +53,6 @@ function CitizenReportsPage() {
               <th className="px-4 py-3">Jurisdiction</th>
               <th className="px-4 py-3">Authenticity</th>
               <th className="px-4 py-3">Reporter Signal</th>
-              <th className="px-4 py-3">Speech Input</th>
               <th className="px-4 py-3">Submitted</th>
               <th className="px-4 py-3">Status</th>
             </tr>
@@ -109,11 +108,6 @@ function CitizenReportsPage() {
                     ) : (
                       <span className="text-xs text-[#74857d]">-</span>
                     )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-[#5d7068]">
-                      <Mic size={12} /> {t('alerts.speechToText')}
-                    </span>
                   </td>
                   <td className="px-4 py-3">{formatDate(report.created_at)}</td>
                   <td className="px-4 py-3"><StatusBadge status={report.status} /></td>
