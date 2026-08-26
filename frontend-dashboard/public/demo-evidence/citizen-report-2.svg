@@ -1,0 +1,10 @@
+<svg width="960" height="640" viewBox="0 0 960 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="960" height="640" fill="#E8EFE8"/>
+  <rect x="72" y="76" width="816" height="488" rx="20" fill="#FCFEFC" stroke="#C8D7C9" stroke-width="8"/>
+  <rect x="120" y="130" width="336" height="214" rx="16" fill="#D6E5D4"/>
+  <path d="M158 318L236 230L296 284L356 198L418 318" stroke="#5F7D60" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M480 354H840" stroke="#647A68" stroke-width="16" stroke-linecap="round"/>
+  <path d="M480 406H790" stroke="#88A08D" stroke-width="14" stroke-linecap="round"/>
+  <path d="M480 458H748" stroke="#A0B8A6" stroke-width="14" stroke-linecap="round"/>
+  <text x="120" y="526" fill="#254236" font-family="Arial, sans-serif" font-size="36" font-weight="700">Citizen Upload · New fencing poles</text>
+</svg>

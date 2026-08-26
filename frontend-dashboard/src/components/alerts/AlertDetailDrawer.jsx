@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { MapContainer, TileLayer, CircleMarker } from 'react-leaflet'
-import { BadgeCheck, CalendarDays, MapPin, Mic, ShieldCheck, UserRound, X } from 'lucide-react'
+import { BadgeCheck, CalendarDays, Image as ImageIcon, MapPin, Mic, ShieldCheck, UserRound, X } from 'lucide-react'
 import StatusBadge from '../common/StatusBadge'
 import SourceBadge from '../common/SourceBadge'
 import CorroborationBadge from '../common/CorroborationBadge'
@@ -12,6 +12,7 @@ import {
   formatFlagCode,
 } from '../../utils/formatters'
 import { useAppLanguage } from '../../hooks/useAppLanguage'
+import { getEvidenceImageUrls, getObservationText } from '../../utils/reportEvidence'
 
 const mapTileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
 
@@ -40,6 +41,7 @@ function AlertDetailDrawer({
 }) {
   const { t } = useAppLanguage()
   const [officerNote, setOfficerNote] = useState(flag?.officer_notes ?? '')
+  const [selectedEvidenceUrl, setSelectedEvidenceUrl] = useState(null)
 
   const normalizedSource = String(flag?.source ?? '').toLowerCase().replaceAll(' ', '_')
   const isCitizenReport = normalizedSource === 'citizen_report'
@@ -57,6 +59,10 @@ function AlertDetailDrawer({
     (linkedReport?.tier === 3 ||
       /verified|ngo/i.test(String(linkedReport?.reporter_trust ?? '')) ||
       /verified|ngo/i.test(String(linkedReport?.role ?? '')))
+
+  const observationText = getObservationText(linkedReport)
+  const evidenceImageUrls = getEvidenceImageUrls(linkedReport)
+  const primaryEvidence = evidenceImageUrls[0] ?? null
 
   const isUnderReview = flag?.status === 'Under Review'
   const isVerified = flag?.status === 'Verified'
@@ -128,13 +134,35 @@ function AlertDetailDrawer({
 
         {isCitizenReport ? (
           <div className="mt-4 rounded-lg border border-[#dfe6df] bg-[#fbfdfb] p-3">
-            <h4 className="text-sm font-semibold text-[#1f3a2f]">{t('alerts.citizenNarrative')}</h4>
-            <p className="mt-1 text-sm text-[#40554b]">
-              {linkedReport?.description ?? t('alerts.citizenFallback')}
-            </p>
-            <p className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-[#5d7068]">
-              <Mic size={13} /> {t('alerts.speechToText')}
-            </p>
+            <h4 className="text-sm font-semibold text-[#1f3a2f]">What did you observe?</h4>
+            <p className="mt-2 text-sm text-[#40554b]">{observationText}</p>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <p className="inline-flex items-center gap-1 text-xs font-medium text-[#5d7068]">
+                <Mic size={13} /> {t('alerts.speechToText')}
+              </p>
+
+              {primaryEvidence ? (
+                <div className="group relative inline-flex">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedEvidenceUrl(primaryEvidence)}
+                    className="inline-flex items-center gap-1 rounded-md border border-[#ccdbcc] px-2.5 py-1 text-xs font-semibold text-[#27483b] hover:bg-[#eef5ee]"
+                  >
+                    <ImageIcon size={12} />
+                    View Uploaded Image
+                  </button>
+
+                  <div className="pointer-events-none invisible absolute left-1/2 top-full z-10 mt-2 w-48 -translate-x-1/2 overflow-hidden rounded-lg border border-[#d7e3d7] bg-white p-1 opacity-0 shadow-lg transition group-hover:visible group-hover:opacity-100">
+                    <img src={primaryEvidence} alt="Citizen evidence preview" className="h-28 w-full rounded-md object-cover" />
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            {!primaryEvidence ? (
+              <p className="mt-2 text-xs text-[#66736c]">No citizen image uploaded with this report yet.</p>
+            ) : null}
           </div>
         ) : null}
 
@@ -153,9 +181,29 @@ function AlertDetailDrawer({
             <h4 className="text-sm font-semibold text-[#1f3a2f]">Before/After Satellite Images</h4>
             <p className="mt-2 text-xs text-[#66736c]">Placeholder: imagery will be linked by backend API.</p>
           </div>
+
           <div className="rounded-lg border border-dashed border-[#d5dfd5] bg-[#fafdf9] p-3">
-            <h4 className="text-sm font-semibold text-[#1f3a2f]">Citizen Photos</h4>
-            <p className="mt-2 text-xs text-[#66736c]">Placeholder: uploaded photos will appear here when integrated.</p>
+            <h4 className="text-sm font-semibold text-[#1f3a2f]">Citizen Uploads</h4>
+            {isCitizenReport ? (
+              evidenceImageUrls.length > 0 ? (
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  {evidenceImageUrls.slice(0, 4).map((imageUrl, index) => (
+                    <button
+                      key={`${flag.flag_id}-${imageUrl}`}
+                      type="button"
+                      onClick={() => setSelectedEvidenceUrl(imageUrl)}
+                      className="overflow-hidden rounded-md border border-[#d4ded4] text-left"
+                    >
+                      <img src={imageUrl} alt={`Citizen upload ${index + 1}`} className="h-20 w-full bg-[#f7faf7] object-cover" />
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-2 text-xs text-[#66736c]">No citizen image uploaded with this report yet.</p>
+              )
+            ) : (
+              <p className="mt-2 text-xs text-[#66736c]">Citizen uploads are available for citizen-sourced alerts.</p>
+            )}
           </div>
         </div>
 
@@ -236,6 +284,35 @@ function AlertDetailDrawer({
           The system supports prioritization and routing, not legal determination.
         </p>
       </aside>
+
+      {selectedEvidenceUrl ? (
+        <div
+          className="fixed inset-0 z-[1900] flex items-center justify-center bg-[#0a1d14]/70 p-4 backdrop-blur-[1px]"
+          onClick={() => setSelectedEvidenceUrl(null)}
+          role="presentation"
+        >
+          <div
+            className="relative w-full max-w-4xl overflow-hidden rounded-xl border border-[#d9e3d9] bg-white"
+            onClick={(event) => event.stopPropagation()}
+            role="presentation"
+          >
+            <button
+              type="button"
+              onClick={() => setSelectedEvidenceUrl(null)}
+              className="absolute right-3 top-3 z-10 rounded-md border border-[#d8e1d8] bg-white/95 p-2 text-[#2a4337]"
+              aria-label="Close image preview"
+            >
+              <X size={16} />
+            </button>
+
+            <img
+              src={selectedEvidenceUrl}
+              alt="Citizen uploaded evidence"
+              className="max-h-[82vh] w-full bg-[#f7faf7] object-contain"
+            />
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

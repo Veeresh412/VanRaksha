@@ -28,6 +28,7 @@ function DashboardLayout() {
     jurisdictionsById,
     analytics,
     citizenReports,
+    satellitePings,
     isSyncing,
     syncError,
     refreshData,
@@ -168,6 +169,15 @@ function DashboardLayout() {
     [scopedFlags, effectiveFilters, jurisdictionsById],
   )
 
+  const scopedSatelliteSignals = useMemo(() => {
+    if (session.role === 'admin') return satellitePings.length
+
+    const scopedFlagIds = new Set(scopedFlags.map((flag) => flag.flag_id))
+    return satellitePings.filter(
+      (ping) => ping.linked_flag_id && scopedFlagIds.has(ping.linked_flag_id),
+    ).length
+  }, [satellitePings, scopedFlags, session.role])
+
   const notifications = useMemo(
     () =>
       [...scopedFlags]
@@ -215,6 +225,7 @@ function DashboardLayout() {
         analytics={{
           totalFlags: scopedFlags.length,
           citizenReports: scopedCitizenReports.length,
+          satelliteSignals: scopedSatelliteSignals,
         }}
         open={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
