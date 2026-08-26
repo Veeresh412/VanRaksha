@@ -1,31 +1,78 @@
 import { PENDING_REPORT_VERIFICATION } from '../models/trustStatus';
 
-export function mapBackendReportResponse(reportData, backendResponse, user) {
+const BACKEND_STATUS_MAP = {
+  Unverified: 'pending',
+  'Under Review': 'under_review',
+  Verified: 'verified',
+  Rejected: 'rejected',
+  Resolved: 'resolved',
+};
+
+export function mapBackendStatus(status) {
+  return BACKEND_STATUS_MAP[status] || 'submitted';
+}
+
+export function parseReportApiId(id) {
+  if (typeof id === 'string' && id.startsWith('VR-')) {
+    return parseInt(id.slice(3), 10);
+  }
+
+  return parseInt(id, 10);
+}
+
+export function mapBackendReportListItem(backendResponse, user) {
   const id = `VR-${String(backendResponse.id).padStart(4, '0')}`;
 
   return {
     id,
     backendId: backendResponse.id,
-    title: reportData.description,
-    description: reportData.description,
-    photos: [],
+    title: backendResponse.description || '',
+    description: backendResponse.description || '',
+    photos: backendResponse.photo_url
+      ? [
+          {
+            id: `photo-${backendResponse.id}`,
+            name: 'Evidence photo',
+            url: backendResponse.photo_url,
+          },
+        ]
+      : [],
     videos: [],
-    latitude: reportData.latitude,
-    longitude: reportData.longitude,
+    latitude: backendResponse.lat,
+    longitude: backendResponse.lng,
     locationSource: 'device_capture',
-    submittedAt: new Date().toISOString(),
+    submittedAt: backendResponse.created_at,
     userId: user?.id,
     submitterName: user?.name,
-    reporterType: 'citizen',
-    status: 'submitted',
+    reporterTrust: backendResponse.reporter_trust ?? null,
+    reporterType: backendResponse.reporter_trust || 'citizen',
+    authenticityScore:
+      typeof backendResponse.authenticity_score === 'number'
+        ? backendResponse.authenticity_score
+        : null,
+    backendStatus: backendResponse.status ?? null,
+    status: mapBackendStatus(backendResponse.status),
     corroborationStatus: 'awaiting',
-    trustTier: backendResponse.tier ?? 1,
+    trustTier: backendResponse.tier ?? null,
     trustTierLabel: null,
     verificationStatus: 'pending',
     evidenceVerification: {
       geoTagStatus: 'pending',
       authenticityStatus: 'pending',
     },
+  };
+}
+
+export function mapBackendReportResponse(reportData, backendResponse, user) {
+  const mapped = mapBackendReportListItem(backendResponse, user);
+
+  return {
+    ...mapped,
+    title: reportData.description,
+    description: reportData.description,
+    latitude: reportData.latitude,
+    longitude: reportData.longitude,
+    submittedAt: new Date().toISOString(),
   };
 }
 

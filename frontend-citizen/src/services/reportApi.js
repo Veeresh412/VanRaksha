@@ -3,14 +3,43 @@
  * Keeps HTTP/API logic separate from local development fallbacks.
  */
 
-import { mapBackendReportResponse } from '../utils/reportBuilder';
+import {
+  mapBackendReportListItem,
+  mapBackendReportResponse,
+  parseReportApiId,
+} from '../utils/reportBuilder';
 
-import { apiRequest } from './api';
+import { apiRequest, getStoredUser } from './api';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 export function isApiConfigured() {
   return Boolean(API_BASE_URL);
+}
+
+export async function fetchReportsFromApi() {
+  const user = getStoredUser();
+  const reports = await apiRequest('/reports');
+
+  if (!Array.isArray(reports)) {
+    return [];
+  }
+
+  return reports
+    .map((item) => mapBackendReportListItem(item, user))
+    .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+}
+
+export async function fetchReportByIdFromApi(id) {
+  const user = getStoredUser();
+  const numericId = parseReportApiId(id);
+
+  if (Number.isNaN(numericId)) {
+    throw new Error('Report not found.');
+  }
+
+  const backendResponse = await apiRequest(`/reports/${numericId}`);
+  return mapBackendReportListItem(backendResponse, user);
 }
 
 export async function createReportViaApi(reportData, user) {

@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useHomePageData } from '../../hooks/useHomePageData';
 import { getGreetingKey } from '../../utils/i18nHelpers';
+import { resolveTrustStatus } from '../../models/trustStatus';
 import Header from '../../components/common/Header';
 import ReportCard from '../../components/reports/ReportCard';
 import EmptyState from '../../components/common/EmptyState';
@@ -14,7 +15,8 @@ export default function Home() {
   const { user } = useAuth();
   const location = useLocation();
   const { t } = useTranslation();
-  const { reports, trustStatus, loading } = useHomePageData(user, location.key);
+  const { reports, loading } = useHomePageData(user, location.key);
+  const trustStatus = user ? resolveTrustStatus(user) : null;
 
   return (
     <div className="home-page">
@@ -27,7 +29,7 @@ export default function Home() {
         </p>
       </div>
 
-      {!loading && trustStatus && <TrustTierStatusCard status={trustStatus} />}
+      {trustStatus && <TrustTierStatusCard status={trustStatus} />}
 
       <div className="home-page__action">
         <Link to="/report" className="home-page__action-card">

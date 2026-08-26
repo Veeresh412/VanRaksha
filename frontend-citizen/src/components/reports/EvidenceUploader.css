@@ -1,10 +1,3 @@
-.evidence-uploader__grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-md);
-  margin-bottom: var(--space-lg);
-}
-
 .evidence-uploader__box {
   display: flex;
   flex-direction: column;
@@ -18,6 +11,7 @@
   cursor: pointer;
   transition: border-color var(--transition-fast);
   min-height: 100px;
+  margin-bottom: var(--space-lg);
 }
 
 .evidence-uploader__box:hover {

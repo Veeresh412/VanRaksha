@@ -16,7 +16,6 @@ export default function ReportIncident() {
   const { t } = useTranslation();
   const [description, setDescription] = useState('');
   const [photos, setPhotos] = useState([]);
-  const [videos, setVideos] = useState([]);
   const [location, setLocation] = useState(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -50,7 +49,6 @@ export default function ReportIncident() {
       const report = await submitReport({
         description: description.trim(),
         photos,
-        videos,
         latitude: location.latitude,
         longitude: location.longitude,
       });
@@ -101,12 +99,7 @@ export default function ReportIncident() {
 
         <div className="report-incident-page__section">
           <p className="report-incident-page__section-label">{t('report.addEvidence')}</p>
-          <EvidenceUploader
-            photos={photos}
-            videos={videos}
-            onPhotosChange={setPhotos}
-            onVideosChange={setVideos}
-          />
+          <EvidenceUploader photos={photos} onPhotosChange={setPhotos} />
         </div>
 
         <div className="report-incident-page__section">

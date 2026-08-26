@@ -1,11 +1,11 @@
 import { Check } from 'lucide-react';
 import { useTranslation } from '../../hooks/useTranslation';
-import { TIMELINE_STEPS } from '../../utils/statusUtils';
+import { TIMELINE_STEPS, getTimelineIndex } from '../../utils/statusUtils';
 import './StatusTimeline.css';
 
 export default function StatusTimeline({ report }) {
   const { t } = useTranslation();
-  const currentIndex = TIMELINE_STEPS.indexOf(report.status);
+  const currentIndex = getTimelineIndex(report.status);
 
   const steps = TIMELINE_STEPS.map((step, index) => ({
     step,

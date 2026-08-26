@@ -6,7 +6,9 @@
 import {
   findDemoUser,
   findDemoUserByPhone,
+  getDemoUserById,
   toDemoSessionUser,
+  DEMO_LOGIN_ACCOUNTS,
 } from '../data/demoData';
 import {
   logout as apiLogout,
@@ -21,7 +23,7 @@ import {
   buildSessionUserFromLogin,
 } from './api';
 
-export { getStoredToken, isAuthenticated };
+export { getStoredToken, isAuthenticated, DEMO_LOGIN_ACCOUNTS };
 
 export function getCurrentUser() {
   return getStoredUser();
@@ -56,6 +58,22 @@ export async function login(identifier, password) {
  * Complete login after phone OTP verification.
  * Prefer matching a demo/registered user by phone; otherwise create a citizen session.
  */
+/**
+ * Sign in as a preset demo account without credentials or OTP.
+ * Uses the same session shape as password/phone login.
+ */
+export async function loginDemoUser(demoUserId) {
+  const demoUser = getDemoUserById(demoUserId);
+
+  if (!demoUser) {
+    throw new Error('Demo account not found.');
+  }
+
+  const user = toDemoSessionUser(demoUser);
+  saveSession(user);
+  return { token: getStoredToken(), user };
+}
+
 export async function loginWithVerifiedPhone(phone) {
   const digits = String(phone || '').replace(/\D/g, '').slice(-10);
 

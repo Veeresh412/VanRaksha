@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, UserPlus, TreePine, Phone } from 'lucide-react';
+import { Mail, Lock, UserPlus, TreePine, Phone, Presentation, X } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useTranslation } from '../../hooks/useTranslation';
 import { translateErrorMessage } from '../../utils/i18nHelpers';
+import { DEMO_LOGIN_ACCOUNTS } from '../../services/authService';
 import Button from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
 import OtpInput from '../../components/auth/OtpInput';
@@ -37,9 +38,10 @@ function translateOtpError(t, message) {
 }
 
 export default function Login() {
-  const { login, loginWithPhone } = useAuth();
+  const { login, loginWithPhone, loginDemoUser } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const demoMenuRef = useRef(null);
 
   const [method, setMethod] = useState('phone');
   const [step, setStep] = useState('credentials');
@@ -54,6 +56,20 @@ export default function Login() {
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showDemoMenu, setShowDemoMenu] = useState(false);
+
+  useEffect(() => {
+    if (!showDemoMenu) return undefined;
+
+    const handleClickOutside = (event) => {
+      if (demoMenuRef.current && !demoMenuRef.current.contains(event.target)) {
+        setShowDemoMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showDemoMenu]);
 
   useEffect(() => {
     if (resendSeconds <= 0) return undefined;
@@ -163,6 +179,21 @@ export default function Login() {
     alert(t('login.forgotPasswordAlert'));
   };
 
+  const handleDemoLogin = async (demoUserId) => {
+    setError('');
+    setLoading(true);
+    setShowDemoMenu(false);
+
+    try {
+      await loginDemoUser(demoUserId);
+      navigate('/');
+    } catch (err) {
+      setError(translateErrorMessage(t, err.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const switchMethod = (next) => {
     setMethod(next);
     setStep('credentials');
@@ -174,6 +205,55 @@ export default function Login() {
 
   return (
     <div className="login-page">
+      <div className="login-page__demo-login" ref={demoMenuRef}>
+        <button
+          type="button"
+          className="login-page__demo-btn"
+          onClick={() => setShowDemoMenu((open) => !open)}
+          aria-expanded={showDemoMenu}
+          aria-haspopup="dialog"
+          disabled={loading}
+        >
+          <Presentation size={16} />
+          {t('login.demoLogin')}
+        </button>
+
+        {showDemoMenu && (
+          <div
+            className="login-page__demo-menu"
+            role="dialog"
+            aria-label={t('login.demoLoginTitle')}
+          >
+            <div className="login-page__demo-menu-header">
+              <span className="login-page__demo-menu-label">{t('login.demoOnly')}</span>
+              <button
+                type="button"
+                className="login-page__demo-menu-close"
+                onClick={() => setShowDemoMenu(false)}
+                aria-label={t('common.close')}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <p className="login-page__demo-menu-title">{t('login.demoLoginTitle')}</p>
+            <p className="login-page__demo-menu-subtitle">{t('login.demoLoginSubtitle')}</p>
+            <div className="login-page__demo-options">
+              {DEMO_LOGIN_ACCOUNTS.map((account) => (
+                <button
+                  key={account.userId}
+                  type="button"
+                  className="login-page__demo-option"
+                  onClick={() => handleDemoLogin(account.userId)}
+                  disabled={loading}
+                >
+                  {t(account.labelKey)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="login-page__hero">
         <ForestSilhouette />
         <div className="login-page__logo">

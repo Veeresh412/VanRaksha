@@ -1,85 +1,42 @@
 /**
  * Report service — UI entry point.
- * Tries FastAPI when configured; falls back to localStorage when the backend is offline.
- * Demo users also receive read-only demo reports from demoData (service layer only).
+ * Reads and writes reports through FastAPI when configured.
  */
 
 import { getStoredUser } from './api';
 
 import {
-  cacheLocalReport,
-  getLocalReportById,
-  getLocalReports,
-  submitReportLocally,
-} from './localReportStore';
-
-import { createReportViaApi, isApiConfigured } from './reportApi';
-
-import { getDemoReportById, getDemoReportsForUser } from '../data/demoData';
+  createReportViaApi,
+  fetchReportByIdFromApi,
+  fetchReportsFromApi,
+  isApiConfigured,
+} from './reportApi';
 
 import { buildMockNotifications } from '../data/notificationMock';
 
-import { isBackendUnavailableError } from '../utils/networkErrors';
-
-function mergeReports(localReports, demoReports, filters = {}) {
-  const byId = new Map();
-
-  localReports.forEach((report) => byId.set(report.id, report));
-
-  demoReports.forEach((report) => {
-    if (!byId.has(report.id)) {
-      byId.set(report.id, report);
-    }
-  });
-
-  let merged = Array.from(byId.values()).sort(
-    (a, b) => new Date(b.submittedAt) - new Date(a.submittedAt)
-  );
-
+function applyStatusFilter(reports, filters = {}) {
   if (filters.status && filters.status !== 'all') {
-    merged = merged.filter((report) => report.status === filters.status);
+    return reports.filter((report) => report.status === filters.status);
   }
 
-  return merged;
-}
-
-function getDemoReportsForCurrentUser() {
-  const user = getStoredUser();
-
-  if (!user?.isDemo) return [];
-
-  return getDemoReportsForUser(user.id);
+  return reports;
 }
 
 export async function getReports(filters = {}) {
-  const localReports = getLocalReports();
-  const demoReports = getDemoReportsForCurrentUser();
-
-  if (!demoReports.length) {
-    return getLocalReports(filters);
+  if (!isApiConfigured()) {
+    return [];
   }
 
-  return mergeReports(localReports, demoReports, filters);
+  const reports = await fetchReportsFromApi();
+  return applyStatusFilter(reports, filters);
 }
 
 export async function getReportById(id) {
-  try {
-    return getLocalReportById(id);
-  } catch (error) {
-    const user = getStoredUser();
-
-    if (!user?.isDemo) {
-      throw error;
-    }
-
-    const demoReport = getDemoReportById(id);
-
-    if (demoReport && demoReport.userId === user.id) {
-      return demoReport;
-    }
-
-    throw error;
+  if (!isApiConfigured()) {
+    throw new Error('Report not found.');
   }
+
+  return fetchReportByIdFromApi(id);
 }
 
 export async function getRecentReports(limit = 3) {
@@ -89,33 +46,19 @@ export async function getRecentReports(limit = 3) {
 }
 
 export async function submitReport(reportData) {
-  if (isApiConfigured()) {
-    try {
-      const user = getStoredUser();
-
-      // Use the logged-in user's actual tier.
-      // Supports Tier 1, Tier 2, and Tier 3.
-      const report = await createReportViaApi(
-        {
-          ...reportData,
-          tier: user.accountType === 'organization' ? 3 : 1,
-        },
-        user
-      );
-
-      cacheLocalReport(report);
-
-      return report;
-    } catch (error) {
-      if (isBackendUnavailableError(error)) {
-        return submitReportLocally(reportData);
-      }
-
-      throw error;
-    }
+  if (!isApiConfigured()) {
+    throw new Error('Backend is not configured.');
   }
 
-  return submitReportLocally(reportData);
+  const user = getStoredUser();
+
+  return createReportViaApi(
+    {
+      ...reportData,
+      tier: user.accountType === 'organization' ? 3 : 1,
+    },
+    user
+  );
 }
 
 export async function getNotifications() {

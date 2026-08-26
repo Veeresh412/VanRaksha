@@ -21,10 +21,23 @@
   border-color: var(--color-status-review-border);
 }
 
-.status-badge--submitted {
+.status-badge--submitted,
+.status-badge--pending {
   background: var(--color-status-submitted-bg);
   color: var(--color-status-submitted-text);
   border-color: var(--color-status-submitted-border);
+}
+
+.status-badge--verified {
+  background: var(--color-status-resolved-bg);
+  color: var(--color-status-resolved-text);
+  border-color: var(--color-status-resolved-border);
+}
+
+.status-badge--rejected {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
 }
 
 .status-badge--resolved {
@@ -54,10 +67,23 @@
   border-color: var(--color-status-review-border);
 }
 
-.status-banner--submitted {
+.status-banner--submitted,
+.status-banner--pending {
   background: var(--color-status-submitted-bg);
   color: var(--color-status-submitted-text);
   border-color: var(--color-status-submitted-border);
+}
+
+.status-banner--verified {
+  background: var(--color-status-resolved-bg);
+  color: var(--color-status-resolved-text);
+  border-color: var(--color-status-resolved-border);
+}
+
+.status-banner--rejected {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
 }
 
 .status-banner--resolved {

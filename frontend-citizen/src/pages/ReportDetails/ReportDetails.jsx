@@ -6,6 +6,12 @@ import { getReportTrustResult } from '../../services/trustService';
 import { formatDateTime } from '../../utils/dateUtils';
 import { getTrustTierDescription } from '../../models/trustStatus';
 import { getEvidenceTypeKey, getReportTitle } from '../../utils/evidenceUtils';
+import {
+  formatAuthenticityScore,
+  formatLocationShort,
+  getPrimaryPhoto,
+  getReporterDisplayName,
+} from '../../utils/reportDisplay';
 import { useTranslation } from '../../hooks/useTranslation';
 import { translateErrorMessage } from '../../utils/i18nHelpers';
 import Header from '../../components/common/Header';
@@ -67,7 +73,10 @@ export default function ReportDetails() {
     return (
       <div className="report-details-page">
         <Header title={t('report.detailsTitle')} showBack />
-        <div className="report-details-page__loading">{t('report.loading')}</div>
+        <div className="report-details-page__loading">
+          <div className="loading-spinner" aria-hidden="true" />
+          <p>{t('report.loading')}</p>
+        </div>
       </div>
     );
   }
@@ -88,6 +97,10 @@ export default function ReportDetails() {
   const corroborationKey = report.corroborationStatus || 'awaiting';
   const reportTitle = getReportTitle(report);
   const evidenceKey = getEvidenceTypeKey(report);
+  const reporterName = getReporterDisplayName(report);
+  const locationLabel = formatLocationShort(report);
+  const authenticityScore = formatAuthenticityScore(report);
+  const primaryPhoto = getPrimaryPhoto(report);
 
   return (
     <div className="report-details-page">
@@ -105,8 +118,14 @@ export default function ReportDetails() {
         </div>
 
         <div className="report-details-page__section">
-          <h3 className="report-details-page__section-title">{t('report.trustCorroboration')}</h3>
+          <h3 className="report-details-page__section-title">{t('report.reporterInfo')}</h3>
           <div className="detail-summary-card">
+            {reporterName && (
+              <div className="detail-summary-row">
+                <span className="detail-summary-row__label">{t('report.reporter')}</span>
+                <span className="detail-summary-row__value">{reporterName}</span>
+              </div>
+            )}
             <div className="detail-summary-row">
               <span className="detail-summary-row__label">{t('trust.trustTier')}</span>
               <span className="detail-summary-row__value">
@@ -117,6 +136,28 @@ export default function ReportDetails() {
                 )}
               </span>
             </div>
+            <div className="detail-summary-row">
+              <span className="detail-summary-row__label">{t('report.authenticityScore')}</span>
+              <span className="detail-summary-row__value">
+                {authenticityScore != null ? (
+                  <span className="report-details-page__score">{authenticityScore}</span>
+                ) : (
+                  <span className="report-details-page__unassessed">{t('common.notAvailable')}</span>
+                )}
+              </span>
+            </div>
+            {locationLabel && (
+              <div className="detail-summary-row">
+                <span className="detail-summary-row__label">{t('report.location')}</span>
+                <span className="detail-summary-row__value">{locationLabel}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="report-details-page__section">
+          <h3 className="report-details-page__section-title">{t('report.trustCorroboration')}</h3>
+          <div className="detail-summary-card">
             <div className="detail-summary-row">
               <span className="detail-summary-row__label">{t('corroboration.label')}</span>
               <span className="detail-summary-row__value">
@@ -141,6 +182,13 @@ export default function ReportDetails() {
 
         <div className="report-details-page__section">
           <h3 className="report-details-page__section-title">{t('report.evidenceVerification')}</h3>
+
+          {primaryPhoto?.url && (
+            <div className="report-details-page__hero-photo">
+              <img src={primaryPhoto.url} alt={primaryPhoto.name || t('report.submittedPhoto')} />
+            </div>
+          )}
+
           <div className="detail-summary-card report-details-page__summary">
             {evidenceKey !== 'none' && (
               <div className="detail-summary-row">

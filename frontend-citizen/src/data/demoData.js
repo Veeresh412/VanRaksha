@@ -288,6 +288,16 @@ export const DEMO_REPORTS = [
   },
 ];
 
+/** Preset demo accounts for presenter quick-login (see Login page). */
+export const DEMO_LOGIN_ACCOUNTS = [
+  { userId: 'demo-ravi', labelKey: 'login.demoAccountTier1Ravi' },
+  { userId: 'demo-vanraksha-foundation', labelKey: 'login.demoAccountTier3Ngo' },
+];
+
+export function getDemoUserById(userId) {
+  return DEMO_USERS.find((user) => user.id === userId) ?? null;
+}
+
 export function findDemoUser(identifier, password) {
   const normalized = identifier.trim().toLowerCase();
   return DEMO_USERS.find(

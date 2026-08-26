@@ -64,7 +64,24 @@
 }
 
 .report-card__meta-row {
-  display: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm) var(--space-md);
+  margin-top: var(--space-xs);
+}
+
+.report-card__meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.report-card__meta-item--score {
+  font-weight: 500;
+  color: var(--color-text);
 }
 
 .report-card__description {
@@ -75,6 +92,7 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  margin: 0 0 var(--space-sm);
 }
 
 .report-card__chevron {

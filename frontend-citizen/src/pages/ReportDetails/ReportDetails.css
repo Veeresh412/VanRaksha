@@ -121,15 +121,42 @@
   display: flex;
 }
 
-.report-details-page__loading,
-.report-details-page__error {
+.report-details-page__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
   padding: var(--space-3xl) var(--space-lg);
   text-align: center;
   color: var(--color-text-muted);
 }
 
 .report-details-page__error {
+  padding: var(--space-3xl) var(--space-lg);
+  text-align: center;
   color: #b91c1c;
+}
+
+.report-details-page__hero-photo {
+  margin-bottom: var(--space-md);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--color-border-light);
+  background: var(--color-bg);
+}
+
+.report-details-page__hero-photo img {
+  display: block;
+  width: 100%;
+  max-height: 240px;
+  object-fit: cover;
+}
+
+.report-details-page__score {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--color-primary);
 }
 
 .report-details-page__helper {
