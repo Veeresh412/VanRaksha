@@ -1,4 +1,5 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List
@@ -21,6 +22,10 @@ class AuthOTPVerify(BaseModel):
     otp: str
 
 app = FastAPI(title="VanRaksha API", version="2.0.0")
+
+# Create local storage directory
+os.makedirs("uploads/images", exist_ok=True)
+app.mount("/static/images", StaticFiles(directory="uploads/images"), name="images")
 
 # --- CORS (For local frontend testing) ---
 app.add_middleware(
@@ -51,6 +56,21 @@ def verify_otp(data: AuthOTPVerify):
             "phone_number": data.phone_number
         }
     }
+
+# --- UPLOADS ---
+import uuid
+import shutil
+
+@app.post("/upload")
+def upload_image(file: UploadFile = File(...)):
+    ext = file.filename.split('.')[-1] if '.' in file.filename else 'jpg'
+    filename = f"{uuid.uuid4().hex}.{ext}"
+    file_path = f"uploads/images/{filename}"
+    
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    return {"url": f"http://127.0.0.1:8000/static/images/{filename}"}
 
 # --- REPORTS ---
 @app.post("/reports", response_model=schemas.ReportResponse)

@@ -14,10 +14,32 @@ export function isApiConfigured() {
 }
 
 export async function createReportViaApi(reportData, user) {
+  let photoUrl = null;
+
+  if (reportData.photos && reportData.photos.length > 0) {
+    const fileToUpload = reportData.photos[0].file;
+    const formData = new FormData();
+    formData.append('file', fileToUpload);
+    
+    try {
+      const uploadResponse = await fetch(`${API_BASE_URL}/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (uploadResponse.ok) {
+        const uploadData = await uploadResponse.json();
+        photoUrl = uploadData.url;
+      }
+    } catch (e) {
+      console.error("Failed to upload photo locally:", e);
+    }
+  }
+
   const backendResponse = await apiRequest('/reports', {
     method: 'POST',
     body: JSON.stringify({
-      photo_file_url: null,
+      photo_file_url: photoUrl,
       lat: reportData.latitude,
       lng: reportData.longitude,
       description: reportData.description,

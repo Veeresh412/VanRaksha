@@ -22,3 +22,6 @@ vanraksha_dev.db
 # Testing
 .pytest_cache/
 pytest_cache/
+
+
+uploads/
