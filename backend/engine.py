@@ -2,10 +2,27 @@ from sqlalchemy.orm import Session
 import models
 import schemas
 import math
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import func
 
 # Earth radius in meters
 R = 6371e3 
+FP_SUPPRESSION_DEFAULT_RADIUS_METERS = 250.0
+FP_SUPPRESSION_TTL_DAYS = 90
+FP_SUPPRESSION_OVERRIDE_CONFIDENCE = 0.92
+FP_SUPPRESSION_CORROBORATION_RADIUS_METERS = 500
+
+def _utc_now():
+    return datetime.now(timezone.utc)
+
+def _normalize_to_utc(value: datetime):
+    if value is None:
+        return None
+
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+
+    return value.astimezone(timezone.utc)
 
 def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     phi1 = math.radians(lat1)
@@ -33,6 +50,139 @@ def assign_fra_parcel(db: Session, lat: float, lng: float):
     if parcel:
         return parcel.id
     return None
+
+def create_false_positive_suppression_for_flag(
+    db: Session,
+    flag: models.Flag,
+    suppression_reason: str = "Rejected as false positive by reviewer",
+    radius_m: float = FP_SUPPRESSION_DEFAULT_RADIUS_METERS,
+    ttl_days: int = FP_SUPPRESSION_TTL_DAYS,
+):
+    if flag is None:
+        return None
+
+    if flag.source not in [schemas.SourceEnum.satellite, schemas.SourceEnum.combined]:
+        return None
+
+    now = _utc_now()
+
+    existing_suppressions = (
+        db.query(models.FalsePositiveSuppression)
+        .filter(models.FalsePositiveSuppression.active == True)
+        .all()
+    )
+
+    for suppression in existing_suppressions:
+        suppression_expires_at = _normalize_to_utc(suppression.expires_at)
+        if suppression_expires_at and suppression_expires_at <= now:
+            continue
+
+        if suppression.signal_type and suppression.signal_type != flag.signal_type:
+            continue
+
+        if suppression.fra_parcel_id and flag.fra_parcel_id and suppression.fra_parcel_id != flag.fra_parcel_id:
+            continue
+
+        distance = haversine_distance(flag.lat, flag.lng, suppression.lat, suppression.lng)
+        if distance <= max(radius_m, suppression.radius_m or 0):
+            return suppression
+
+    suppression = models.FalsePositiveSuppression(
+        flag_id=flag.id,
+        lat=flag.lat,
+        lng=flag.lng,
+        radius_m=radius_m,
+        signal_type=flag.signal_type,
+        fra_parcel_id=flag.fra_parcel_id,
+        active=True,
+        expires_at=now + timedelta(days=ttl_days),
+        suppression_reason=suppression_reason,
+    )
+    db.add(suppression)
+    db.commit()
+    db.refresh(suppression)
+    return suppression
+
+def _find_matching_suppression_zones(db: Session, new_ping: models.SatellitePing):
+    now = _utc_now()
+
+    all_active_suppressions = (
+        db.query(models.FalsePositiveSuppression)
+        .filter(models.FalsePositiveSuppression.active == True)
+        .all()
+    )
+
+    matching_suppressions = []
+    for suppression in all_active_suppressions:
+        suppression_expires_at = _normalize_to_utc(suppression.expires_at)
+        if suppression_expires_at and suppression_expires_at <= now:
+            continue
+
+        if suppression.signal_type and suppression.signal_type != new_ping.signal_type:
+            continue
+
+        if suppression.fra_parcel_id and new_ping.fra_parcel_id and suppression.fra_parcel_id != new_ping.fra_parcel_id:
+            continue
+
+        distance = haversine_distance(new_ping.lat, new_ping.lng, suppression.lat, suppression.lng)
+        if distance <= (suppression.radius_m or FP_SUPPRESSION_DEFAULT_RADIUS_METERS):
+            matching_suppressions.append((suppression, distance))
+
+    return matching_suppressions
+
+def _has_suppression_override_signal(db: Session, new_ping: models.SatellitePing):
+    if new_ping.confidence_score >= FP_SUPPRESSION_OVERRIDE_CONFIDENCE:
+        return True, "high_confidence"
+
+    all_reports = db.query(models.Report).all()
+    nearby_reports = [
+        report
+        for report in all_reports
+        if haversine_distance(new_ping.lat, new_ping.lng, report.lat, report.lng)
+        <= FP_SUPPRESSION_CORROBORATION_RADIUS_METERS
+    ]
+
+    if len(nearby_reports) >= 1:
+        return True, "citizen_corroboration"
+
+    all_unsuppressed_pings = (
+        db.query(models.SatellitePing)
+        .filter(models.SatellitePing.suppressed == False)
+        .filter(models.SatellitePing.id != new_ping.id)
+        .all()
+    )
+    nearby_unsuppressed_pings = [
+        ping
+        for ping in all_unsuppressed_pings
+        if haversine_distance(new_ping.lat, new_ping.lng, ping.lat, ping.lng)
+        <= FP_SUPPRESSION_CORROBORATION_RADIUS_METERS
+    ]
+
+    if len(nearby_unsuppressed_pings) >= 1:
+        return True, "multiple_satellite_signals"
+
+    return False, None
+
+def apply_false_positive_suppression_if_needed(db: Session, new_ping: models.SatellitePing):
+    matching_suppressions = _find_matching_suppression_zones(db, new_ping)
+    if not matching_suppressions:
+        return False
+
+    has_override, override_reason = _has_suppression_override_signal(db, new_ping)
+    if has_override:
+        new_ping.suppression_reason = f"Suppression override ({override_reason})"
+        db.commit()
+        return False
+
+    nearest_suppression, _ = sorted(matching_suppressions, key=lambda item: item[1])[0]
+
+    new_ping.suppressed = True
+    new_ping.suppression_id = nearest_suppression.id
+    new_ping.suppression_reason = (
+        f"Suppressed by FP zone {nearest_suppression.id} until {nearest_suppression.expires_at.isoformat()}"
+    )
+    db.commit()
+    return True
 
 def process_report_corroboration(db: Session, new_report: models.Report):
     NEARBY_RADIUS_METERS = 500
@@ -87,6 +237,9 @@ def process_report_corroboration(db: Session, new_report: models.Report):
 
 def process_satellite_ping_corroboration(db: Session, new_ping: models.SatellitePing):
     NEARBY_RADIUS_METERS = 500
+
+    if apply_false_positive_suppression_if_needed(db, new_ping):
+        return
     
     # Check for existing flags to join
     all_flags = db.query(models.Flag).all()
