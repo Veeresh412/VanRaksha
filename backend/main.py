@@ -31,6 +31,9 @@ class AuthOTPVerify(BaseModel):
 
 app = FastAPI(title="VanRaksha API", version="2.0.0")
 
+# Auto-create tables for local/hackathon setup (including suppression tables)
+database.Base.metadata.create_all(bind=database.engine)
+
 # Create local storage directory
 os.makedirs("uploads/images", exist_ok=True)
 app.mount("/static/images", StaticFiles(directory="uploads/images"), name="images")
@@ -206,6 +209,8 @@ def update_flag(flag_id: int, flag_update: schemas.FlagUpdate, db: Session = Dep
     flag = db.query(models.Flag).filter(models.Flag.id == flag_id).first()
     if not flag:
         raise HTTPException(status_code=404, detail="Flag not found")
+
+    previous_status = flag.status
         
     if flag_update.status:
         flag.status = flag_update.status
@@ -217,6 +222,17 @@ def update_flag(flag_id: int, flag_update: schemas.FlagUpdate, db: Session = Dep
         flag.officer_notes = flag_update.officer_notes
         
     db.commit()
+
+    if (
+        flag_update.status == schemas.StatusEnum.rejected
+        and previous_status != schemas.StatusEnum.rejected
+    ):
+        engine.create_false_positive_suppression_for_flag(
+            db,
+            flag,
+            suppression_reason="Rejected flag converted to false-positive suppression zone",
+        )
+
     db.refresh(flag)
     return flag
 
@@ -226,6 +242,7 @@ def update_flag(flag_id: int, flag_update: schemas.FlagUpdate, db: Session = Dep
 def clear_test_data(db: Session = Depends(database.get_db)):
     db.query(models.Report).delete()
     db.query(models.SatellitePing).delete()
+    db.query(models.FalsePositiveSuppression).delete()
     db.query(models.Flag).delete()
     db.commit()
     return {"message": "All data cleared successfully."}

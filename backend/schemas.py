@@ -64,6 +64,9 @@ class SatellitePingCreate(BaseModel):
 class SatellitePingResponse(SatellitePingCreate):
     id: int
     linked_flag_id: Optional[int] = None
+    suppressed: bool = False
+    suppression_reason: Optional[str] = None
+    suppression_id: Optional[int] = None
     created_at: datetime
     
     class Config:
@@ -93,5 +96,4 @@ class FlagResponse(FlagBase):
 class FlagUpdate(BaseModel):
     status: Optional[StatusEnum] = None
     officer_notes: Optional[str] = None
-
 

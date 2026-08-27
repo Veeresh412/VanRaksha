@@ -41,6 +41,7 @@ class Flag(Base):
     
     reports = relationship("Report", back_populates="linked_flag")
     satellite_pings = relationship("SatellitePing", back_populates="linked_flag")
+    suppressions = relationship("FalsePositiveSuppression", back_populates="flag")
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
@@ -79,5 +80,31 @@ class SatellitePing(Base):
     
     linked_flag_id = Column(Integer, ForeignKey("flags.id"), nullable=True)
     linked_flag = relationship("Flag", back_populates="satellite_pings")
+
+    suppressed = Column(Boolean, default=False, nullable=False)
+    suppression_reason = Column(String, nullable=True)
+    suppression_id = Column(Integer, ForeignKey("false_positive_suppressions.id"), nullable=True)
+    suppression = relationship("FalsePositiveSuppression", back_populates="satellite_pings")
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class FalsePositiveSuppression(Base):
+    __tablename__ = "false_positive_suppressions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    flag_id = Column(Integer, ForeignKey("flags.id"), nullable=True)
+    lat = Column(Float, nullable=False)
+    lng = Column(Float, nullable=False)
+    radius_m = Column(Float, default=250.0, nullable=False)
+
+    signal_type = Column(SQLEnum(schemas.SignalTypeEnum), nullable=True)
+    fra_parcel_id = Column(String, ForeignKey("fra_parcels.id"), nullable=True)
+    model_version = Column(String, nullable=True)
+
+    active = Column(Boolean, default=True, nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    suppression_reason = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    flag = relationship("Flag", back_populates="suppressions")
+    satellite_pings = relationship("SatellitePing", back_populates="suppression")
