@@ -1,4 +1,5 @@
 import rawData from './seed_data.json'
+import { getEvidenceImageUrls, getObservationText } from '../utils/reportEvidence'
 
 const statusMap = {
   unverified: 'Unverified',
@@ -33,6 +34,13 @@ const tierTrustMap = {
   2: 'Geo-verified / SMS-verified User',
   3: 'Verified NGO / Forest Official',
 }
+
+const observationSamples = [
+  'Fresh tree stumps spotted near the stream and tractor movement after dark.',
+  'New soil clearing seen beside the forest boundary; fencing poles appeared overnight.',
+  'Sounds of cutting machinery heard early morning and canopy patch looks thinner today.',
+  'Observed suspicious clearing and fresh vehicle tracks near community forest edge.',
+]
 
 function normalizeUnitScore(value) {
   if (typeof value !== 'number' || Number.isNaN(value)) return null
@@ -192,6 +200,9 @@ function deriveReportsFromFlags(flags) {
       const reportCount = flag.corroboration_state === 'Corroborated (2 reports)' ? 2 : 1
 
       return Array.from({ length: reportCount }, (_, reportIndex) => {
+        const observationText =
+          observationSamples[(reportCounter + reportIndex) % observationSamples.length]
+
         const tier =
           flag.corroboration_state === 'Tier 3 Fast-track'
             ? 3
@@ -204,9 +215,11 @@ function deriveReportsFromFlags(flags) {
         const report = {
           report_id: `report_${reportCounter}`,
           photo_url: null,
+          evidence_urls: [],
           latitude: flag.latitude,
           longitude: flag.longitude,
-          description: `Citizen report linked to ${flag.flag_id}`,
+          description: observationText,
+          observation_text: observationText,
           tier,
           reporter_trust: tierTrustMap[tier],
           status: flag.status,
@@ -227,9 +240,11 @@ function deriveReportsFromFlags(flags) {
     ? {
         report_id: `report_${reportCounter}`,
         photo_url: null,
+        evidence_urls: [],
         latitude: Number((firstFlag.latitude + 0.0012).toFixed(6)),
         longitude: Number((firstFlag.longitude + 0.001).toFixed(6)),
-        description: 'Unlinked citizen observation waiting for corroboration',
+        description: observationSamples[reportCounter % observationSamples.length],
+        observation_text: observationSamples[reportCounter % observationSamples.length],
         tier: 1,
         reporter_trust: tierTrustMap[1],
         status: 'Unverified',
@@ -261,13 +276,18 @@ function normalizeReports(reports = []) {
           : null,
     )
 
+    const observationText = getObservationText(report)
+    const evidenceImageUrls = getEvidenceImageUrls(report)
+
     return {
       ...report,
       report_id: report.report_id ?? `report_${index + 1}`,
-      photo_url: report.photo_url ?? null,
+      photo_url: report.photo_url ?? evidenceImageUrls[0] ?? null,
+      evidence_urls: evidenceImageUrls,
       latitude: report.latitude ?? report.lat ?? linkedFlag?.latitude ?? null,
       longitude: report.longitude ?? report.long ?? linkedFlag?.longitude ?? null,
-      description: report.description ?? 'Citizen-submitted report',
+      description: observationText,
+      observation_text: observationText,
       tier,
       reporter_trust: report.reporter_trust ?? tierTrustMap[tier],
       status: toStatus(report.status ?? linkedFlag?.status),
