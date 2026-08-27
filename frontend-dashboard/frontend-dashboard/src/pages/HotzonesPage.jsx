@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react'
 import { AlertTriangle, ShieldAlert, FileText, MapPin, RefreshCw, CheckCircle2, Info } from 'lucide-react'
 import PageHeader from '../components/common/PageHeader'
+import { API_BASE_URL } from '../services/config'
+import { useAuth } from '../contexts/AuthContext'
 
 function HotzonesPage() {
+  const { session } = useAuth()
   const [district, setDistrict] = useState('mayurbhanj')
   const [hotzoneData, setHotzoneData] = useState(null)
   const [reportText, setReportText] = useState('')
@@ -15,13 +18,21 @@ function HotzonesPage() {
     setError(null)
     try {
       // Fetch classified hotzones JSON
-      const res = await fetch(`http://localhost:8002/hotzones?district_id=${district}`)
-      if (!res.ok) throw new Error(`Hotzone API status ${res.status}`)
+      const res = await fetch(`${API_BASE_URL}/hotzones?district_id=${district}`, {
+        headers: {
+          'Authorization': session?.access_token ? `Bearer ${session.access_token}` : ''
+        }
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       setHotzoneData(data)
 
       // Fetch plain text officer report
-      const repRes = await fetch(`http://localhost:8002/hotzones/report?district_id=${district}&format=text`)
+      const repRes = await fetch(`${API_BASE_URL}/hotzones/report?district_id=${district}&format=text`, {
+        headers: {
+          'Authorization': session?.access_token ? `Bearer ${session.access_token}` : ''
+        }
+      })
       if (repRes.ok) {
         const text = await repRes.text()
         setReportText(text)

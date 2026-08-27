@@ -169,6 +169,10 @@ def get_report(report_id: int, db: Session = Depends(database.get_db)):
     return report
 
 # --- SATELLITE PINGS ---
+@app.get("/satellite-pings", response_model=List[schemas.SatellitePingResponse])
+def get_satellite_pings(db: Session = Depends(database.get_db)):
+    return db.query(models.SatellitePing).all()
+
 @app.post("/satellite-pings", response_model=schemas.SatellitePingResponse)
 def create_satellite_ping(ping: schemas.SatellitePingCreate, db: Session = Depends(database.get_db)):
     db_ping = models.SatellitePing(
@@ -231,6 +235,14 @@ def clear_test_data(db: Session = Depends(database.get_db)):
     return {"message": "All data cleared successfully."}
 
 
+
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+try:
+    from hotzone.api import app as hotzone_app
+    app.mount("/", hotzone_app)
+except Exception as e:
+    print(f"Failed to mount hotzone API: {e}")
 
 if __name__ == "__main__":
     import uvicorn
