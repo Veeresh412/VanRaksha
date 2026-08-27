@@ -1,0 +1,17 @@
+# DEMO DATA — Simplified OpenStreetMap road network centerpoints for Mayurbhanj district, Odisha.
+lat,lng,highway,name
+22.2500,86.1600,primary,NH520 North
+22.1800,86.2500,primary,NH520 Central
+22.1100,86.3500,primary,NH520 Junction
+22.0200,86.5000,primary,NH18 North
+21.9320,86.7310,primary,NH18 Baripada Expressway
+21.8500,86.8200,primary,NH18 South
+21.7500,86.9100,primary,NH18 Boundary
+22.1130,86.1250,secondary,SH49 Jashipur Highway
+22.0100,86.0500,secondary,SH49 South Link
+21.7630,85.9740,secondary,SH49 Karanjia Bypass
+21.9300,86.4000,tertiary,Baripada-Karanjia Connector
+22.1500,86.0000,tertiary,Simlipal National Park Access Road
+21.8000,86.4000,tertiary,Udala Feeder Road
+21.6500,86.5500,tertiary,Kaptipada Rural Road
+22.2800,86.3000,tertiary,Bahalda Border Road

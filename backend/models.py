@@ -1,9 +1,13 @@
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Boolean, Enum as SQLEnum, JSON
-from geoalchemy2 import Geometry
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from database import Base
 import schemas
+
+try:
+    from geoalchemy2 import Geometry
+except ImportError:
+    Geometry = String
 
 class FRAParcel(Base):
     __tablename__ = "fra_parcels"

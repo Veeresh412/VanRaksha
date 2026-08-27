@@ -8,6 +8,7 @@ import JurisdictionsPage from './pages/JurisdictionsPage'
 import AlertFlagsPage from './pages/AlertFlagsPage'
 import CitizenReportsPage from './pages/CitizenReportsPage'
 import ModelBacktestingPage from './pages/ModelBacktestingPage'
+import HotzonesPage from './pages/HotzonesPage'
 import UsersRolesPage from './pages/UsersRolesPage'
 import AdminSettingsPage from './pages/AdminSettingsPage'
 
@@ -50,6 +51,7 @@ function AppRoutes() {
           <Route path="/jurisdictions" element={<JurisdictionsPage />} />
           <Route path="/alerts" element={<AlertFlagsPage />} />
           <Route path="/reports" element={<CitizenReportsPage />} />
+          <Route path="/hotzones" element={<HotzonesPage />} />
           <Route path="/backtesting" element={<ModelBacktestingPage />} />
 
           <Route element={<AdminOnlyRoute />}>

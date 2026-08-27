@@ -34,6 +34,7 @@ function Sidebar({ session, analytics, open, onClose, onOpenHelp, onOpenFeedback
       icon: ClipboardList,
       badge: analytics.citizenReports,
     },
+    { label: 'Deforestation Hotzones', path: '/hotzones', icon: Leaf },
     { label: t('sidebar.accuracyTrend'), path: '/backtesting', icon: BarChart3 },
     { label: t('sidebar.adminSettings'), path: '/settings', icon: Settings },
     { label: t('sidebar.usersRoles'), path: '/users', icon: Users },
@@ -54,6 +55,7 @@ function Sidebar({ session, analytics, open, onClose, onOpenHelp, onOpenFeedback
       icon: ClipboardList,
       badge: analytics.citizenReports,
     },
+    { label: 'Deforestation Hotzones', path: '/hotzones', icon: Leaf },
   ]
 
   const districtNav = [
@@ -71,6 +73,7 @@ function Sidebar({ session, analytics, open, onClose, onOpenHelp, onOpenFeedback
       icon: ClipboardList,
       badge: analytics.citizenReports,
     },
+    { label: 'Deforestation Hotzones', path: '/hotzones', icon: Leaf },
     { label: t('sidebar.accuracyTrend'), path: '/backtesting', icon: BarChart3 },
   ]
 
