@@ -75,6 +75,21 @@ def upload_image(file: UploadFile = File(...)):
 # --- REPORTS ---
 @app.post("/reports", response_model=schemas.ReportResponse)
 def create_report(report: schemas.ReportCreate, db: Session = Depends(database.get_db)):
+    
+    auth_score = report.authenticity_score
+    
+    # If a photo was uploaded to our local server, run the Authenticity Scanner!
+    if report.photo_file_url and report.photo_file_url.startswith("http://127.0.0.1:8000/static/images/"):
+        try:
+            import authenticity
+            filename = report.photo_file_url.split("/")[-1]
+            local_path = f"uploads/images/{filename}"
+            result = authenticity.analyze_photo(local_path)
+            auth_score = result.get("authenticity_score", auth_score)
+            print(f"Authenticity Score for {filename}: {auth_score}")
+        except Exception as e:
+            print(f"Authenticity check failed: {e}")
+
     db_report = models.Report(
         photo_url=report.photo_file_url,
         lat=report.lat,
@@ -82,7 +97,7 @@ def create_report(report: schemas.ReportCreate, db: Session = Depends(database.g
         description=report.description,
         tier=report.tier,
         reporter_trust=engine.get_reporter_trust_from_tier(report.tier),
-        authenticity_score=report.authenticity_score
+        authenticity_score=auth_score
     )
     db.add(db_report)
     db.commit()
