@@ -45,6 +45,7 @@ class ReportResponse(BaseModel):
     tier: int
     reporter_trust: str
     authenticity_score: float
+    geotag_status: str
     status: StatusEnum
     linked_flag_id: Optional[int] = None
     created_at: datetime

@@ -52,6 +52,7 @@ class Report(Base):
     tier = Column(Integer, default=1)
     reporter_trust = Column(String, default="Basic Reporter") 
     authenticity_score = Column(Float, default=0.0)
+    geotag_status = Column(String, default="Unverified")
     
     status = Column(SQLEnum(schemas.StatusEnum), default=schemas.StatusEnum.unverified)
     

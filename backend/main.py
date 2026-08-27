@@ -4,15 +4,23 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List
 import os
+import math
+import uuid
+import shutil
 
 import models
 import schemas
 import database
 import engine
 
-
-
 from pydantic import BaseModel
+
+def calculate_distance(lat1, lon1, lat2, lon2):
+    R = 6371000 # Earth radius in meters
+    phi_1, phi_2 = math.radians(lat1), math.radians(lat2)
+    dphi, dlam = math.radians(lat2 - lat1), math.radians(lon2 - lon1)
+    a = math.sin(dphi/2)**2 + math.cos(phi_1)*math.cos(phi_2)*math.sin(dlam/2)**2
+    return R * (2 * math.atan2(math.sqrt(a), math.sqrt(1 - a)))
 
 class AuthOTPRequest(BaseModel):
     phone_number: str
@@ -77,6 +85,7 @@ def upload_image(file: UploadFile = File(...)):
 def create_report(report: schemas.ReportCreate, db: Session = Depends(database.get_db)):
     
     auth_score = report.authenticity_score
+    geotag_status = "Unverified"
     
     # If a photo was uploaded to our local server, run the Authenticity Scanner!
     if report.photo_file_url and report.photo_file_url.startswith("http://127.0.0.1:8000/static/images/"):
@@ -84,9 +93,31 @@ def create_report(report: schemas.ReportCreate, db: Session = Depends(database.g
             import authenticity
             filename = report.photo_file_url.split("/")[-1]
             local_path = f"uploads/images/{filename}"
-            result = authenticity.analyze_photo(local_path)
+            
+            # Pass verbose=True so the backend returns the raw GPS coordinates
+            result = authenticity.analyze_photo(local_path, verbose=True)
             auth_score = result.get("authenticity_score", auth_score)
-            print(f"Authenticity Score for {filename}: {auth_score}")
+            
+            # Geotag Corroboration Check
+            diagnostics = result.get("diagnostics", {})
+            exif_lat = diagnostics.get("gps_latitude")
+            exif_lng = diagnostics.get("gps_longitude")
+            
+            if exif_lat is not None and exif_lng is not None:
+                dist = calculate_distance(report.lat, report.lng, exif_lat, exif_lng)
+                if dist > 500: # Discrepancy > 500 meters
+                    geotag_status = "Location Discrepancy"
+                    auth_score = max(0.0, auth_score - 0.40) # 40% penalty, floor at 0
+                    print(f"GEOTAG ALERT: Claimed ({report.lat}, {report.lng}), Real ({exif_lat}, {exif_lng}). Dist: {dist}m")
+                else:
+                    geotag_status = "Location Verified"
+                    # Promote Tier 1 users to Tier 2 if Geotag is verified
+                    if report.tier == 1:
+                        report.tier = 2
+            else:
+                geotag_status = "Location Unverified"
+                
+            print(f"Authenticity Score for {filename}: {auth_score} (Geotag: {geotag_status})")
         except Exception as e:
             print(f"Authenticity check failed: {e}")
 
@@ -97,7 +128,8 @@ def create_report(report: schemas.ReportCreate, db: Session = Depends(database.g
         description=report.description,
         tier=report.tier,
         reporter_trust=engine.get_reporter_trust_from_tier(report.tier),
-        authenticity_score=auth_score
+        authenticity_score=auth_score,
+        geotag_status=geotag_status
     )
     db.add(db_report)
     db.commit()
