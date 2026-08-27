@@ -16,6 +16,7 @@ import { getFlags, patchFlag } from '../services/flags'
 import { getCitizenReports } from '../services/reports'
 import { clearTestData } from '../services/testing'
 import { normalizeUnitScore } from '../utils/formatters'
+import { getEvidenceImageUrls, getObservationText } from '../utils/reportEvidence'
 
 const AppDataContext = createContext(null)
 
@@ -167,13 +168,27 @@ function normalizeReportRecord(report, flagsById) {
           : null,
     )
 
+  const observationText = getObservationText(report)
+  const evidenceImageUrls = getEvidenceImageUrls(report)
+
+  const fallbackReportId =
+    report.id !== undefined && report.id !== null
+      ? `report_${report.id}`
+      : linkedFlagId
+        ? `report_${String(linkedFlagId).replace('flag_', '')}_${tier}`
+        : `report_unlinked_${Math.abs(Math.round((latitude ?? 0) * 1000))}_${Math.abs(Math.round((longitude ?? 0) * 1000))}`
+
+  const reportId = report.report_id ?? report.reportId ?? fallbackReportId
+
   return {
     ...report,
-    report_id: report.report_id,
-    photo_url: report.photo_url ?? null,
+    report_id: reportId,
+    photo_url: report.photo_url ?? evidenceImageUrls[0] ?? null,
+    evidence_urls: evidenceImageUrls,
     latitude,
     longitude,
-    description: report.description ?? 'Citizen-submitted report',
+    description: observationText,
+    observation_text: observationText,
     tier,
     reporter_trust: report.reporter_trust ?? reporterTrustByTier[tier] ?? reporterTrustByTier[1],
     status,

@@ -7,6 +7,7 @@ import DashboardPage from './pages/DashboardPage'
 import JurisdictionsPage from './pages/JurisdictionsPage'
 import AlertFlagsPage from './pages/AlertFlagsPage'
 import CitizenReportsPage from './pages/CitizenReportsPage'
+import SatellitePingsPage from './pages/SatellitePingsPage'
 import ModelBacktestingPage from './pages/ModelBacktestingPage'
 import HotzonesPage from './pages/HotzonesPage'
 import UsersRolesPage from './pages/UsersRolesPage'
@@ -50,6 +51,7 @@ function AppRoutes() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/jurisdictions" element={<JurisdictionsPage />} />
           <Route path="/alerts" element={<AlertFlagsPage />} />
+          <Route path="/satellite-pings" element={<SatellitePingsPage />} />
           <Route path="/reports" element={<CitizenReportsPage />} />
           <Route path="/hotzones" element={<HotzonesPage />} />
           <Route path="/backtesting" element={<ModelBacktestingPage />} />

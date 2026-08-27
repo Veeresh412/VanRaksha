@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { MapContainer, TileLayer, CircleMarker } from 'react-leaflet'
-import { BadgeCheck, CalendarDays, MapPin, Mic, ShieldCheck, UserRound, X } from 'lucide-react'
+import { BadgeCheck, CalendarDays, Image as ImageIcon, MapPin, Mic, ShieldCheck, UserRound, X } from 'lucide-react'
 import StatusBadge from '../common/StatusBadge'
 import SourceBadge from '../common/SourceBadge'
 import CorroborationBadge from '../common/CorroborationBadge'
@@ -15,6 +15,7 @@ import {
   normalizeUnitScore,
 } from '../../utils/formatters'
 import { useAppLanguage } from '../../hooks/useAppLanguage'
+import { getEvidenceImageUrls, getObservationText } from '../../utils/reportEvidence'
 
 const mapTileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
 
@@ -30,7 +31,7 @@ function DetailRow({ label, value }) {
 function AlertDetailDrawer({
   flag,
   jurisdiction,
-  linkedReport,
+  linkedReports = [],
   open,
   onClose,
   onUnderReview,
@@ -43,26 +44,41 @@ function AlertDetailDrawer({
 }) {
   const { t } = useAppLanguage()
   const [officerNote, setOfficerNote] = useState(flag?.officer_notes ?? '')
+  const [selectedEvidenceUrl, setSelectedEvidenceUrl] = useState(null)
 
   const normalizedSource = String(flag?.source ?? '').toLowerCase().replaceAll(' ', '_')
-  const isCitizenReport = normalizedSource === 'citizen_report'
+  const isCitizenReport = normalizedSource === 'citizen_report' || normalizedSource === 'combined'
 
-  const baseAuthenticityScore = linkedReport?.authenticity_score ?? flag?.satellite_confidence
+  const orderedLinkedReports = useMemo(() => {
+    return [...(linkedReports ?? [])].sort((reportA, reportB) => {
+      const tierDelta = Number(reportB?.tier ?? 1) - Number(reportA?.tier ?? 1)
+      if (tierDelta !== 0) return tierDelta
+
+      return new Date(reportB?.created_at ?? 0).getTime() - new Date(reportA?.created_at ?? 0).getTime()
+    })
+  }, [linkedReports])
+
+  const primaryLinkedReport = orderedLinkedReports[0] ?? null
+
+  const baseAuthenticityScore = primaryLinkedReport?.authenticity_score ?? flag?.satellite_confidence
   const authenticityScore = normalizeUnitScore(baseAuthenticityScore)
 
   const hasAuthenticity = isCitizenReport && typeof authenticityScore === 'number'
   const isAuthenticityVerified = hasAuthenticity && authenticityScore >= 0.8
   const isVerifiedNgoReport =
     isCitizenReport &&
-    (linkedReport?.tier === 3 ||
-      /verified|ngo/i.test(String(linkedReport?.reporter_trust ?? '')) ||
-      /verified|ngo/i.test(String(linkedReport?.role ?? '')))
+    (primaryLinkedReport?.tier === 3 ||
+      /verified|ngo/i.test(String(primaryLinkedReport?.reporter_trust ?? '')) ||
+      /verified|ngo/i.test(String(primaryLinkedReport?.role ?? '')))
 
   const isUnderReview = flag?.status === 'Under Review'
   const isVerified = flag?.status === 'Verified'
   const isRejected = flag?.status === 'Rejected'
   const isResolved = flag?.status === 'Resolved'
   const noteUnchanged = (officerNote ?? '').trim() === (flag?.officer_notes ?? '').trim()
+
+  const latitude = flag?.latitude ?? flag?.lat
+  const longitude = flag?.longitude ?? flag?.long
 
   if (!open || !flag) return null
 
@@ -126,17 +142,84 @@ function AlertDetailDrawer({
           <DetailRow label="Jurisdiction" value={jurisdiction?.gram_sabha ?? 'Unknown'} />
           <DetailRow label="District" value={jurisdiction?.district ?? 'Unknown'} />
           <DetailRow label="State" value={jurisdiction?.state ?? 'Unknown'} />
-          <DetailRow label="Coordinates" value={formatCoordinates(flag.latitude, flag.longitude)} />
+          <DetailRow label="Coordinates" value={formatCoordinates(latitude, longitude)} />
         </div>
 
-        {isCitizenReport ? (
+        {orderedLinkedReports.length > 0 ? (
+          <div className="mt-4 space-y-3 rounded-lg border border-[#dfe6df] bg-[#fbfdfb] p-3">
+            <h4 className="text-sm font-semibold text-[#1f3a2f]">
+              Linked Citizen Reports ({orderedLinkedReports.length})
+            </h4>
+
+            {orderedLinkedReports.map((report, index) => {
+              const evidenceImageUrls = getEvidenceImageUrls(report)
+              const observationText = getObservationText(report)
+              const reportId = report.report_id ?? `report_${index + 1}`
+
+              return (
+                <article
+                  key={reportId}
+                  className="rounded-lg border border-[#d6e1d6] bg-white p-3"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-[#1f3a2f]">
+                      {String(reportId).replace('report_', 'RPT-')}
+                    </p>
+                    <p className="text-xs text-[#67756d]">Tier {report.tier ?? 1}</p>
+                  </div>
+
+                  <p className="mt-1 text-xs text-[#66756d]">
+                    Reporter: {report.reporter_trust ?? '--'}
+                  </p>
+
+                  <div className="mt-2 rounded-md border border-[#e3e9e3] bg-[#f9fcf9] p-2.5">
+                    <p className="text-xs font-semibold text-[#51655b]">Observation</p>
+                    <p className="mt-1 text-sm text-[#40554b]">{observationText}</p>
+                    <p className="mt-2 inline-flex items-center gap-1 text-xs text-[#5d7068]">
+                      <Mic size={12} /> {t('alerts.speechToText')}
+                    </p>
+                  </div>
+
+                  <div className="mt-3 rounded-md border border-[#e3e9e3] bg-[#f9fcf9] p-2.5">
+                    <p className="text-xs font-semibold text-[#51655b]">Evidence Images</p>
+
+                    {evidenceImageUrls.length > 0 ? (
+                      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        {evidenceImageUrls.map((imageUrl, imageIndex) => (
+                          <button
+                            key={`${reportId}-${imageUrl}`}
+                            type="button"
+                            onClick={() => setSelectedEvidenceUrl(imageUrl)}
+                            className="overflow-hidden rounded-md border border-[#d6e1d6] text-left"
+                          >
+                            <img
+                              src={imageUrl}
+                              alt={`Citizen evidence ${imageIndex + 1}`}
+                              className="h-28 w-full bg-[#f7faf7] object-cover"
+                            />
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-[#2d4a3d]">
+                              <ImageIcon size={12} /> Open image {imageIndex + 1}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-xs text-[#66736c]">
+                        No image uploaded yet. Backend can populate <code>evidence_urls</code>, <code>photo_urls</code>,
+                        <code>image_urls</code>, or <code>photo_url</code>.
+                      </p>
+                    )}
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+        ) : isCitizenReport ? (
           <div className="mt-4 rounded-lg border border-[#dfe6df] bg-[#fbfdfb] p-3">
-            <h4 className="text-sm font-semibold text-[#1f3a2f]">{t('alerts.citizenNarrative')}</h4>
-            <p className="mt-1 text-sm text-[#40554b]">
-              {linkedReport?.description ?? t('alerts.citizenFallback')}
-            </p>
-            <p className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-[#5d7068]">
-              <Mic size={13} /> {t('alerts.speechToText')}
+            <h4 className="text-sm font-semibold text-[#1f3a2f]">Linked Citizen Reports</h4>
+            <p className="mt-2 text-xs text-[#66736c]">
+              No linked reports were found on this flag yet. Backend can attach related report records by
+              setting each report's <code>linked_flag_id</code> to this flag.
             </p>
           </div>
         ) : null}
@@ -144,10 +227,20 @@ function AlertDetailDrawer({
         <div className="mt-4">
           <h4 className="text-sm font-semibold text-[#1f3a2f]">Contextual Map</h4>
           <div className="mt-2 h-56 overflow-hidden rounded-lg border border-[#d8e1d8]">
-            <MapContainer center={[flag.latitude, flag.longitude]} zoom={13} scrollWheelZoom>
-              <TileLayer url={mapTileUrl} />
-              <CircleMarker center={[flag.latitude, flag.longitude]} radius={9} pathOptions={{ color: '#E5534B', fillOpacity: 0.8 }} />
-            </MapContainer>
+            {typeof latitude === 'number' && typeof longitude === 'number' ? (
+              <MapContainer center={[latitude, longitude]} zoom={13} scrollWheelZoom>
+                <TileLayer url={mapTileUrl} />
+                <CircleMarker
+                  center={[latitude, longitude]}
+                  radius={9}
+                  pathOptions={{ color: '#E5534B', fillOpacity: 0.8 }}
+                />
+              </MapContainer>
+            ) : (
+              <div className="flex h-full items-center justify-center bg-[#f8faf8] text-xs text-[#66736c]">
+                Coordinates unavailable.
+              </div>
+            )}
           </div>
         </div>
 
@@ -157,8 +250,12 @@ function AlertDetailDrawer({
             <p className="mt-2 text-xs text-[#66736c]">Placeholder: imagery will be linked by backend API.</p>
           </div>
           <div className="rounded-lg border border-dashed border-[#d5dfd5] bg-[#fafdf9] p-3">
-            <h4 className="text-sm font-semibold text-[#1f3a2f]">Citizen Photos</h4>
-            <p className="mt-2 text-xs text-[#66736c]">Placeholder: uploaded photos will appear here when integrated.</p>
+            <h4 className="text-sm font-semibold text-[#1f3a2f]">Report Evidence Summary</h4>
+            <p className="mt-2 text-xs text-[#66736c]">
+              {orderedLinkedReports.length > 0
+                ? `${orderedLinkedReports.length} linked report(s) are shown above.`
+                : 'Citizen evidence appears when linked reports and media URLs are available.'}
+            </p>
           </div>
         </div>
 
@@ -239,8 +336,38 @@ function AlertDetailDrawer({
           The system supports prioritization and routing, not legal determination.
         </p>
       </aside>
+
+      {selectedEvidenceUrl ? (
+        <div
+          className="fixed inset-0 z-[1900] flex items-center justify-center bg-[#0a1d14]/70 p-4 backdrop-blur-[1px]"
+          onClick={() => setSelectedEvidenceUrl(null)}
+          role="presentation"
+        >
+          <div
+            className="relative w-full max-w-4xl overflow-hidden rounded-xl border border-[#d9e3d9] bg-white"
+            onClick={(event) => event.stopPropagation()}
+            role="presentation"
+          >
+            <button
+              type="button"
+              onClick={() => setSelectedEvidenceUrl(null)}
+              className="absolute right-3 top-3 z-10 rounded-md border border-[#d8e1d8] bg-white/95 p-2 text-[#2a4337]"
+              aria-label="Close image preview"
+            >
+              <X size={16} />
+            </button>
+
+            <img
+              src={selectedEvidenceUrl}
+              alt="Citizen uploaded evidence"
+              className="max-h-[82vh] w-full bg-[#f7faf7] object-contain"
+            />
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
 
 export default AlertDetailDrawer
+

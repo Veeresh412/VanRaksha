@@ -215,6 +215,7 @@ function DashboardLayout() {
         analytics={{
           totalFlags: scopedFlags.length,
           citizenReports: scopedCitizenReports.length,
+          satelliteSignals: analytics.satelliteSignals,
         }}
         open={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}

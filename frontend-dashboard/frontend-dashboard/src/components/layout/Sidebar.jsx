@@ -29,6 +29,12 @@ function Sidebar({ session, analytics, open, onClose, onOpenHelp, onOpenFeedback
       badge: analytics.totalFlags,
     },
     {
+      label: t('sidebar.satellitePings'),
+      path: '/satellite-pings',
+      icon: BarChart3,
+      badge: analytics.satelliteSignals,
+    },
+    {
       label: t('sidebar.citizenReports'),
       path: '/reports',
       icon: ClipboardList,
@@ -50,6 +56,12 @@ function Sidebar({ session, analytics, open, onClose, onOpenHelp, onOpenFeedback
       badge: analytics.totalFlags,
     },
     {
+      label: t('sidebar.satellitePings'),
+      path: '/satellite-pings',
+      icon: BarChart3,
+      badge: analytics.satelliteSignals,
+    },
+    {
       label: t('sidebar.citizenReports'),
       path: '/reports',
       icon: ClipboardList,
@@ -66,6 +78,12 @@ function Sidebar({ session, analytics, open, onClose, onOpenHelp, onOpenFeedback
       path: '/alerts',
       icon: AlertTriangle,
       badge: analytics.totalFlags,
+    },
+    {
+      label: t('sidebar.satellitePings'),
+      path: '/satellite-pings',
+      icon: BarChart3,
+      badge: analytics.satelliteSignals,
     },
     {
       label: t('sidebar.citizenReports'),

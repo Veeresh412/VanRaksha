@@ -78,31 +78,31 @@ function DashboardPage() {
     citizenReports.forEach((report) => {
       if (!report.linked_flag_id) return
 
-      const existingReport = byFlagId[report.linked_flag_id]
-
-      if (!existingReport) {
-        byFlagId[report.linked_flag_id] = report
-        return
+      if (!byFlagId[report.linked_flag_id]) {
+        byFlagId[report.linked_flag_id] = []
       }
 
-      const nextTier = Number(report.tier ?? 1)
-      const currentTier = Number(existingReport.tier ?? 1)
+      byFlagId[report.linked_flag_id].push(report)
+    })
 
-      if (nextTier > currentTier) {
-        byFlagId[report.linked_flag_id] = report
-        return
-      }
+    Object.keys(byFlagId).forEach((flagId) => {
+      byFlagId[flagId].sort((reportA, reportB) => {
+        const tierDelta = Number(reportB.tier ?? 1) - Number(reportA.tier ?? 1)
+        if (tierDelta !== 0) return tierDelta
 
-      const nextCreatedAt = new Date(report.created_at ?? 0).getTime()
-      const currentCreatedAt = new Date(existingReport.created_at ?? 0).getTime()
-
-      if (nextTier === currentTier && nextCreatedAt > currentCreatedAt) {
-        byFlagId[report.linked_flag_id] = report
-      }
+        return new Date(reportB.created_at ?? 0).getTime() - new Date(reportA.created_at ?? 0).getTime()
+      })
     })
 
     return byFlagId
   }, [citizenReports])
+
+  const primaryLinkedReportByFlagId = useMemo(() => {
+    return Object.entries(linkedReportsByFlagId).reduce((accumulator, [flagId, linkedReports]) => {
+      accumulator[flagId] = linkedReports[0]
+      return accumulator
+    }, {})
+  }, [linkedReportsByFlagId])
 
   const sixMonthTrendBars = useMemo(
     () => [
@@ -292,7 +292,7 @@ function DashboardPage() {
           <ActiveAlertsFeed
             flags={sortedFlags}
             jurisdictionsById={jurisdictionsById}
-            linkedReportsByFlagId={linkedReportsByFlagId}
+            linkedReportsByFlagId={primaryLinkedReportByFlagId}
             onSelectFlag={handleSelectFlag}
             onVerify={handleVerify}
             onReject={handleReject}
@@ -393,7 +393,7 @@ function DashboardPage() {
         open={drawerOpen}
         flag={selectedFlag}
         jurisdiction={selectedFlag ? jurisdictionsById[selectedFlag.jurisdiction_id] : null}
-        linkedReport={selectedFlag ? linkedReportsByFlagId[selectedFlag.flag_id] : null}
+        linkedReports={selectedFlag ? linkedReportsByFlagId[selectedFlag.flag_id] ?? [] : []}
         role={session.role}
         onClose={() => setDrawerOpen(false)}
         onUnderReview={handleUnderReview}

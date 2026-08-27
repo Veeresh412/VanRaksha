@@ -76,11 +76,20 @@ function AlertFlagsPage() {
     citizenReports.forEach((report) => {
       if (!report.linked_flag_id) return
 
-      const existingReport = byFlagId[report.linked_flag_id]
-
-      if (!existingReport || Number(report.tier ?? 1) > Number(existingReport.tier ?? 1)) {
-        byFlagId[report.linked_flag_id] = report
+      if (!byFlagId[report.linked_flag_id]) {
+        byFlagId[report.linked_flag_id] = []
       }
+
+      byFlagId[report.linked_flag_id].push(report)
+    })
+
+    Object.keys(byFlagId).forEach((flagId) => {
+      byFlagId[flagId].sort((reportA, reportB) => {
+        const tierDelta = Number(reportB.tier ?? 1) - Number(reportA.tier ?? 1)
+        if (tierDelta !== 0) return tierDelta
+
+        return new Date(reportB.created_at ?? 0).getTime() - new Date(reportA.created_at ?? 0).getTime()
+      })
     })
 
     return byFlagId
@@ -160,7 +169,7 @@ function AlertFlagsPage() {
         open={Boolean(selectedFlag)}
         flag={selectedFlag}
         jurisdiction={selectedFlag ? jurisdictionsById[selectedFlag.jurisdiction_id] : null}
-        linkedReport={selectedFlag ? linkedReportsByFlagId[selectedFlag.flag_id] : null}
+        linkedReports={selectedFlag ? linkedReportsByFlagId[selectedFlag.flag_id] ?? [] : []}
         role={session.role}
         onClose={() => setSelectedFlagId(null)}
         onUnderReview={(flagId) => updateFlagStatus(flagId, 'Under Review')}
