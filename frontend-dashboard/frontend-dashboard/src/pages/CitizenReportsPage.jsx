@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { BadgeCheck, ShieldCheck } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useAppData } from '../contexts/AppDataContext'
 import { useDashboardContext } from '../hooks/useDashboardContext'
 import PageHeader from '../components/common/PageHeader'
@@ -133,7 +134,16 @@ function CitizenReportsPage() {
                 <tr key={report.report_id} className="border-b border-[#edf2ed] text-[#264437]">
                   <td className="px-4 py-3 font-medium">{report.report_id.replace('report_', 'RPT-')}</td>
                   <td className="px-4 py-3 font-semibold">
-                    {report.linked_flag_id ? formatFlagCode(report.linked_flag_id) : 'Unlinked'}
+                    {report.linked_flag_id ? (
+                      <Link
+                        to={`/alerts?focusFlag=${encodeURIComponent(String(report.linked_flag_id))}`}
+                        className="text-[#1f6e44] underline decoration-[#8cbfa1] underline-offset-2 transition hover:text-[#155435]"
+                      >
+                        {formatFlagCode(report.linked_flag_id)}
+                      </Link>
+                    ) : (
+                      'Unlinked'
+                    )}
                   </td>
                   <td className="px-4 py-3">Tier {report.tier}</td>
                   <td className="px-4 py-3">

@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useDashboardContext } from '../hooks/useDashboardContext'
 import { useAppData } from '../contexts/AppDataContext'
 import PageHeader from '../components/common/PageHeader'
@@ -15,10 +16,35 @@ import {
 } from '../utils/formatters'
 import { compareFlagsByPriority, enrichFlagWithPriority } from '../utils/priority'
 
+function getFlagIdentity(flagId) {
+  if (flagId === null || flagId === undefined) return null
+
+  const normalizedFlagId = String(flagId).trim()
+  if (!normalizedFlagId) return null
+
+  const numericIdMatch = normalizedFlagId.match(/^(?:flag[_-]?|FLAG-)?(\d+)$/i)
+
+  if (numericIdMatch) {
+    return `num:${Number(numericIdMatch[1])}`
+  }
+
+  return `raw:${normalizedFlagId.toLowerCase()}`
+}
+
+function isSameFlag(flagIdA, flagIdB) {
+  const identityA = getFlagIdentity(flagIdA)
+  const identityB = getFlagIdentity(flagIdB)
+
+  return Boolean(identityA && identityB && identityA === identityB)
+}
+
 function AlertFlagsPage() {
   const { visibleFlags, jurisdictionsById, session } = useDashboardContext()
   const { citizenReports, updateFlagStatus, escalateFlag, updateOfficerNote } = useAppData()
   const [selectedFlagId, setSelectedFlagId] = useState(null)
+  const [searchParams] = useSearchParams()
+  const focusedFlagQuery = searchParams.get('focusFlag')
+  const rowRefs = useRef({})
 
   const sortedFlags = useMemo(() => {
     const prioritizedFlags = visibleFlags.map(enrichFlagWithPriority)
@@ -27,6 +53,22 @@ function AlertFlagsPage() {
   }, [visibleFlags])
 
   const selectedFlag = sortedFlags.find((flag) => flag.flag_id === selectedFlagId) ?? null
+
+  const highlightedFlagId = useMemo(() => {
+    if (!focusedFlagQuery) return null
+
+    return sortedFlags.find((flag) => isSameFlag(flag.flag_id, focusedFlagQuery))?.flag_id ?? null
+  }, [sortedFlags, focusedFlagQuery])
+
+  useEffect(() => {
+    if (!highlightedFlagId) return
+
+    const rowNode = rowRefs.current[highlightedFlagId]
+
+    if (!rowNode) return
+
+    rowNode.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [highlightedFlagId])
 
   const linkedReportsByFlagId = useMemo(() => {
     const byFlagId = {}
@@ -69,7 +111,19 @@ function AlertFlagsPage() {
           </thead>
           <tbody>
             {sortedFlags.map((flag) => (
-              <tr key={flag.flag_id} className="border-b border-[#edf2ed] text-[#264437]">
+              <tr
+                key={flag.flag_id}
+                ref={(node) => {
+                  if (node) {
+                    rowRefs.current[flag.flag_id] = node
+                  }
+                }}
+                className={`border-b border-[#edf2ed] text-[#264437] ${
+                  highlightedFlagId === flag.flag_id
+                    ? 'bg-[#fff8e8] shadow-[inset_3px_0_0_0_#f0ad3d]'
+                    : ''
+                }`}
+              >
                 <td className="px-4 py-3 font-semibold">{formatFlagCode(flag.flag_id)}</td>
                 <td className="px-4 py-3">{formatChangeType(flag.signal_type)}</td>
                 <td className="px-4 py-3">{jurisdictionsById[flag.jurisdiction_id]?.gram_sabha}</td>
