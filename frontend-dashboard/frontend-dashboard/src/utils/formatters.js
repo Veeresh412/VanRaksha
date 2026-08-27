@@ -101,9 +101,27 @@ export function formatDate(dateString) {
   })
 }
 
+export function normalizeUnitScore(value) {
+  if (typeof value !== 'number' || Number.isNaN(value)) return null
+
+  const normalizedValue = value > 1 ? value / 100 : value
+  const clampedValue = Math.max(0, Math.min(1, normalizedValue))
+
+  return Number(clampedValue.toFixed(4))
+}
+
+export function formatUnitScore(value) {
+  const normalizedScore = normalizeUnitScore(value)
+  if (typeof normalizedScore !== 'number') return '--'
+
+  return `${normalizedScore.toFixed(2)} / 1.00`
+}
+
 export function formatConfidence(value) {
-  if (typeof value !== 'number') return '--'
-  return `${Math.round(value * 100)}%`
+  const normalizedScore = normalizeUnitScore(value)
+  if (typeof normalizedScore !== 'number') return '--'
+
+  return `${Math.round(normalizedScore * 100)}%`
 }
 
 export function formatFlagCode(flagId) {

@@ -2,12 +2,15 @@ import { BadgeCheck, Check, MapPin, Mic, ShieldAlert, X, XCircle } from 'lucide-
 import StatusBadge from '../common/StatusBadge'
 import SourceBadge from '../common/SourceBadge'
 import CorroborationBadge from '../common/CorroborationBadge'
+import PriorityBadge from '../common/PriorityBadge'
 import {
   formatChangeType,
   formatConfidence,
   formatCoordinates,
   formatDate,
   formatFlagCode,
+  formatUnitScore,
+  normalizeUnitScore,
 } from '../../utils/formatters'
 import { useAppLanguage } from '../../hooks/useAppLanguage'
 
@@ -26,13 +29,10 @@ function AlertCard({
   const isCitizenReport = normalizedSource === 'citizen_report'
 
   const baseAuthenticityScore = linkedReport?.authenticity_score ?? flag.satellite_confidence
-  const authenticityScorePercent =
-    typeof baseAuthenticityScore === 'number'
-      ? Math.round(baseAuthenticityScore <= 1 ? baseAuthenticityScore * 100 : baseAuthenticityScore)
-      : null
+  const authenticityScore = normalizeUnitScore(baseAuthenticityScore)
 
-  const hasAuthenticity = isCitizenReport && typeof authenticityScorePercent === 'number'
-  const isAuthenticityVerified = hasAuthenticity && authenticityScorePercent > 80
+  const hasAuthenticity = isCitizenReport && typeof authenticityScore === 'number'
+  const isAuthenticityVerified = hasAuthenticity && authenticityScore >= 0.8
   const isVerifiedNgoReport =
     isCitizenReport &&
     (linkedReport?.tier === 3 ||
@@ -45,7 +45,12 @@ function AlertCard({
   return (
     <article className="vr-interactive rounded-xl border border-[#e0e8e0] bg-white p-3 shadow-[0_1px_2px_rgba(13,40,28,0.06)]">
       <div className="flex items-center justify-between gap-2">
-        <div className="text-sm font-semibold text-[#1a3329]">{formatFlagCode(flag.flag_id)}</div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <div className="text-sm font-semibold text-[#1a3329]">{formatFlagCode(flag.flag_id)}</div>
+          {typeof flag.priority_score === 'number' ? (
+            <PriorityBadge band={flag.priority_band} score={flag.priority_score} />
+          ) : null}
+        </div>
         <div className="flex items-center gap-2">
           <StatusBadge status={flag.status} className="px-2 py-0.5 text-[10px]" />
           <button type="button" className="text-[#9ca7a1] transition hover:text-[#6f7c74]">
@@ -74,7 +79,7 @@ function AlertCard({
                   : 'border-[#f3d8a4] bg-[#fff7e7] text-[#8f5a04]'
               }`}
             >
-              {t('alerts.authenticity')}: {authenticityScorePercent}% ({isAuthenticityVerified ? t('alerts.verified') : t('alerts.potentialAi')})
+              {t('alerts.authenticity')}: {formatUnitScore(authenticityScore)} ({isAuthenticityVerified ? t('alerts.verified') : t('alerts.potentialAi')})
             </span>
           ) : null}
 

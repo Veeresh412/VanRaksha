@@ -4,8 +4,59 @@ import { useAppData } from '../contexts/AppDataContext'
 import { useDashboardContext } from '../hooks/useDashboardContext'
 import PageHeader from '../components/common/PageHeader'
 import StatusBadge from '../components/common/StatusBadge'
-import { formatConfidence, formatDate, formatFlagCode } from '../utils/formatters'
+import { formatDate, formatFlagCode, formatUnitScore, normalizeUnitScore } from '../utils/formatters'
 import { useAppLanguage } from '../hooks/useAppLanguage'
+
+function resolveUserStatus(report) {
+  const trustLabel = String(report.reporter_trust ?? '').toLowerCase()
+
+  if (trustLabel.includes('verified') || report.tier === 3) return 'Verified User'
+  if (trustLabel.includes('geo') || report.tier === 2) return 'Geo-tagged User'
+  return 'Basic User'
+}
+
+function normalizeLocationStatusLabel(rawStatus, locationVerified) {
+  if (typeof locationVerified === 'boolean') {
+    return locationVerified ? 'Verified' : 'Unverified'
+  }
+
+  const normalizedRawStatus = String(rawStatus ?? '').toLowerCase()
+
+  if (!normalizedRawStatus) return 'Unverified'
+
+  if (
+    normalizedRawStatus.includes('mismatch') ||
+    normalizedRawStatus.includes('discrep') ||
+    normalizedRawStatus.includes('outside') ||
+    normalizedRawStatus.includes('disturb')
+  ) {
+    return 'Location Disturbance'
+  }
+
+  if (normalizedRawStatus.includes('verified') || normalizedRawStatus.includes('match')) {
+    return 'Verified'
+  }
+
+  return 'Unverified'
+}
+
+function getLocationStatusStyle(locationStatus) {
+  const normalizedLocationStatus = String(locationStatus ?? '').toLowerCase()
+
+  if (normalizedLocationStatus.includes('disturb')) {
+    return 'border-[#f3c5bf] bg-[#fef1ef] text-[#b34a40]'
+  }
+
+  if (normalizedLocationStatus.includes('unverified')) {
+    return 'border-[#f3d8a4] bg-[#fff7e7] text-[#8f5a04]'
+  }
+
+  if (normalizedLocationStatus.includes('verified')) {
+    return 'border-[#bae5c8] bg-[#eaf8ef] text-[#206544]'
+  }
+
+  return 'border-[#d4dee8] bg-[#f2f6fa] text-[#4f6174]'
+}
 
 function CitizenReportsPage() {
   const { citizenReports, jurisdictionsById } = useAppData()
@@ -49,7 +100,8 @@ function CitizenReportsPage() {
               <th className="px-4 py-3">Report ID</th>
               <th className="px-4 py-3">Linked Flag</th>
               <th className="px-4 py-3">Tier</th>
-              <th className="px-4 py-3">Reporter Trust</th>
+              <th className="px-4 py-3">User Status</th>
+              <th className="px-4 py-3">Location Status</th>
               <th className="px-4 py-3">Jurisdiction</th>
               <th className="px-4 py-3">Authenticity</th>
               <th className="px-4 py-3">Reporter Signal</th>
@@ -59,13 +111,20 @@ function CitizenReportsPage() {
           </thead>
           <tbody>
             {visibleReports.map((report) => {
-              const authenticityPercent =
-                typeof report.authenticity_score === 'number'
-                  ? Math.round(report.authenticity_score <= 1 ? report.authenticity_score * 100 : report.authenticity_score)
-                  : null
+              const jurisdiction = jurisdictionsById[report.jurisdiction_id]
+
+              const userStatus = resolveUserStatus(report)
+              const locationStatus = normalizeLocationStatusLabel(
+                report.location_status ??
+                  report.location_verification_status ??
+                  report.geo_status ??
+                  report.gps_status,
+                report.location_verified ?? report.geo_verified,
+              )
+              const authenticityScore = normalizeUnitScore(report.authenticity_score)
 
               const isAuthenticityVerified =
-                typeof authenticityPercent === 'number' && authenticityPercent > 80
+                typeof authenticityScore === 'number' && authenticityScore >= 0.8
 
               const isVerifiedNgoReport =
                 report.tier === 3 || /verified|ngo/i.test(String(report.reporter_trust ?? ''))
@@ -79,13 +138,20 @@ function CitizenReportsPage() {
                   <td className="px-4 py-3">Tier {report.tier}</td>
                   <td className="px-4 py-3">
                     <span className="inline-flex items-center gap-1 rounded-full border border-[#d3ddd3] px-2.5 py-1 text-xs">
-                      {report.reporter_trust}
+                      {userStatus}
                       {report.tier === 3 && <ShieldCheck size={12} className="text-[#2E9B5F]" />}
                     </span>
                   </td>
-                  <td className="px-4 py-3">{jurisdictionsById[report.jurisdiction_id]?.gram_sabha}</td>
                   <td className="px-4 py-3">
-                    {typeof authenticityPercent === 'number' ? (
+                    <span
+                      className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${getLocationStatusStyle(locationStatus)}`}
+                    >
+                      {locationStatus}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">{jurisdiction?.gram_sabha}</td>
+                  <td className="px-4 py-3">
+                    {typeof authenticityScore === 'number' ? (
                       <span
                         className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${
                           isAuthenticityVerified
@@ -93,10 +159,10 @@ function CitizenReportsPage() {
                             : 'border-[#f3d8a4] bg-[#fff7e7] text-[#8f5a04]'
                         }`}
                       >
-                        {t('alerts.authenticity')}: {authenticityPercent}% ({isAuthenticityVerified ? t('alerts.verified') : t('alerts.potentialAi')})
+                        {t('alerts.authenticity')}: {formatUnitScore(authenticityScore)} ({isAuthenticityVerified ? t('alerts.verified') : t('alerts.potentialAi')})
                       </span>
                     ) : (
-                      formatConfidence(report.authenticity_score)
+                      '--'
                     )}
                   </td>
                   <td className="px-4 py-3">

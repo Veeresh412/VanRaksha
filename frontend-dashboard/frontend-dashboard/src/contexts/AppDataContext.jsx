@@ -15,6 +15,7 @@ import { USE_SEED_DATA } from '../services/config'
 import { getFlags, patchFlag } from '../services/flags'
 import { getCitizenReports } from '../services/reports'
 import { clearTestData } from '../services/testing'
+import { normalizeUnitScore } from '../utils/formatters'
 
 const AppDataContext = createContext(null)
 
@@ -158,11 +159,13 @@ function normalizeReportRecord(report, flagsById) {
   const createdAt = report.created_at ?? report.submitted_at ?? linkedFlag?.created_at ?? null
 
   const authenticityScore =
-    typeof report.authenticity_score === 'number'
-      ? report.authenticity_score
-      : typeof report.confidence_score === 'number'
-        ? report.confidence_score
-        : null
+    normalizeUnitScore(
+      typeof report.authenticity_score === 'number'
+        ? report.authenticity_score
+        : typeof report.confidence_score === 'number'
+          ? report.confidence_score
+          : null,
+    )
 
   return {
     ...report,

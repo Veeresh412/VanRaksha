@@ -34,6 +34,15 @@ const tierTrustMap = {
   3: 'Verified NGO / Forest Official',
 }
 
+function normalizeUnitScore(value) {
+  if (typeof value !== 'number' || Number.isNaN(value)) return null
+
+  const normalizedValue = value > 1 ? value / 100 : value
+  const clampedValue = Math.max(0, Math.min(1, normalizedValue))
+
+  return Number(clampedValue.toFixed(4))
+}
+
 function toStatus(status) {
   return statusMap[status] ?? status ?? 'Unverified'
 }
@@ -244,6 +253,13 @@ function normalizeReports(reports = []) {
     const linkedFlagId = report.linked_flag_id ?? report.flag_id ?? null
     const linkedFlag = linkedFlagId ? flagsById[linkedFlagId] : null
     const tier = Number(report.tier ?? 1)
+    const authenticityScore = normalizeUnitScore(
+      typeof report.authenticity_score === 'number'
+        ? report.authenticity_score
+        : typeof report.confidence_score === 'number'
+          ? report.confidence_score
+          : null,
+    )
 
     return {
       ...report,
@@ -255,24 +271,14 @@ function normalizeReports(reports = []) {
       tier,
       reporter_trust: report.reporter_trust ?? tierTrustMap[tier],
       status: toStatus(report.status ?? linkedFlag?.status),
-      authenticity_score:
-        typeof report.authenticity_score === 'number'
-          ? report.authenticity_score
-          : typeof report.confidence_score === 'number'
-            ? report.confidence_score
-            : null,
+      authenticity_score: authenticityScore,
       linked_flag_id: linkedFlagId,
       jurisdiction_id: report.jurisdiction_id ?? linkedFlag?.jurisdiction_id ?? null,
       created_at: report.created_at ?? report.submitted_at ?? linkedFlag?.created_at ?? null,
       reporter_label: report.reporter_label ?? null,
       flag_id: linkedFlagId,
       submitted_at: report.created_at ?? report.submitted_at ?? linkedFlag?.created_at ?? null,
-      confidence_score:
-        typeof report.authenticity_score === 'number'
-          ? report.authenticity_score
-          : typeof report.confidence_score === 'number'
-            ? report.confidence_score
-            : null,
+      confidence_score: authenticityScore,
       lat: report.latitude ?? report.lat ?? linkedFlag?.latitude ?? null,
       long: report.longitude ?? report.long ?? linkedFlag?.longitude ?? null,
     }

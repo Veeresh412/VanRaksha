@@ -4,12 +4,15 @@ import { BadgeCheck, CalendarDays, MapPin, Mic, ShieldCheck, UserRound, X } from
 import StatusBadge from '../common/StatusBadge'
 import SourceBadge from '../common/SourceBadge'
 import CorroborationBadge from '../common/CorroborationBadge'
+import PriorityBadge from '../common/PriorityBadge'
 import {
   formatChangeType,
   formatConfidence,
   formatCoordinates,
   formatDate,
   formatFlagCode,
+  formatUnitScore,
+  normalizeUnitScore,
 } from '../../utils/formatters'
 import { useAppLanguage } from '../../hooks/useAppLanguage'
 
@@ -45,13 +48,10 @@ function AlertDetailDrawer({
   const isCitizenReport = normalizedSource === 'citizen_report'
 
   const baseAuthenticityScore = linkedReport?.authenticity_score ?? flag?.satellite_confidence
-  const authenticityScorePercent =
-    typeof baseAuthenticityScore === 'number'
-      ? Math.round(baseAuthenticityScore <= 1 ? baseAuthenticityScore * 100 : baseAuthenticityScore)
-      : null
+  const authenticityScore = normalizeUnitScore(baseAuthenticityScore)
 
-  const hasAuthenticity = isCitizenReport && typeof authenticityScorePercent === 'number'
-  const isAuthenticityVerified = hasAuthenticity && authenticityScorePercent > 80
+  const hasAuthenticity = isCitizenReport && typeof authenticityScore === 'number'
+  const isAuthenticityVerified = hasAuthenticity && authenticityScore >= 0.8
   const isVerifiedNgoReport =
     isCitizenReport &&
     (linkedReport?.tier === 3 ||
@@ -91,6 +91,9 @@ function AlertDetailDrawer({
             corroborationState={flag.corroboration_state}
             corroborationCount={flag.corroboration_count}
           />
+          {typeof flag.priority_score === 'number' ? (
+            <PriorityBadge band={flag.priority_band} score={flag.priority_score} />
+          ) : null}
           {flag.escalated && (
             <span className="rounded-full border border-[#f9d596] bg-[#fff6e5] px-2.5 py-1 text-xs font-semibold text-[#9f5b03]">
               Escalated
@@ -105,7 +108,7 @@ function AlertDetailDrawer({
                   : 'border-[#f3d8a4] bg-[#fff7e7] text-[#8f5a04]'
               }`}
             >
-              {t('alerts.authenticity')}: {authenticityScorePercent}% ({isAuthenticityVerified ? t('alerts.verified') : t('alerts.potentialAi')})
+              {t('alerts.authenticity')}: {formatUnitScore(authenticityScore)} ({isAuthenticityVerified ? t('alerts.verified') : t('alerts.potentialAi')})
             </span>
           ) : null}
 

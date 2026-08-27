@@ -6,26 +6,25 @@ import StatusBadge from '../components/common/StatusBadge'
 import SourceBadge from '../components/common/SourceBadge'
 import CorroborationBadge from '../components/common/CorroborationBadge'
 import AlertDetailDrawer from '../components/alerts/AlertDetailDrawer'
+import PriorityBadge from '../components/common/PriorityBadge'
 import {
   formatChangeType,
   formatConfidence,
   formatDate,
   formatFlagCode,
 } from '../utils/formatters'
+import { compareFlagsByPriority, enrichFlagWithPriority } from '../utils/priority'
 
 function AlertFlagsPage() {
   const { visibleFlags, jurisdictionsById, session } = useDashboardContext()
   const { citizenReports, updateFlagStatus, escalateFlag, updateOfficerNote } = useAppData()
   const [selectedFlagId, setSelectedFlagId] = useState(null)
 
-  const sortedFlags = useMemo(
-    () =>
-      [...visibleFlags].sort(
-        (flagA, flagB) =>
-          new Date(flagB.created_at).getTime() - new Date(flagA.created_at).getTime(),
-      ),
-    [visibleFlags],
-  )
+  const sortedFlags = useMemo(() => {
+    const prioritizedFlags = visibleFlags.map(enrichFlagWithPriority)
+
+    return prioritizedFlags.sort(compareFlagsByPriority)
+  }, [visibleFlags])
 
   const selectedFlag = sortedFlags.find((flag) => flag.flag_id === selectedFlagId) ?? null
 
@@ -62,6 +61,7 @@ function AlertFlagsPage() {
               <th className="px-4 py-3">Source</th>
               <th className="px-4 py-3">Corroboration</th>
               <th className="px-4 py-3">Confidence</th>
+              <th className="px-4 py-3">Priority</th>
               <th className="px-4 py-3">Detected</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3">Action</th>
@@ -81,6 +81,9 @@ function AlertFlagsPage() {
                   />
                 </td>
                 <td className="px-4 py-3">{formatConfidence(flag.satellite_confidence)}</td>
+                <td className="px-4 py-3">
+                  <PriorityBadge band={flag.priority_band} score={flag.priority_score} />
+                </td>
                 <td className="px-4 py-3">{formatDate(flag.created_at)}</td>
                 <td className="px-4 py-3"><StatusBadge status={flag.status} /></td>
                 <td className="px-4 py-3">

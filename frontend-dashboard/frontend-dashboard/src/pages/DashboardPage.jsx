@@ -10,6 +10,7 @@ import BacktestCard from '../components/analytics/BacktestCard'
 import DataOverviewCard from '../components/analytics/DataOverviewCard'
 import InsightModal from '../components/common/InsightModal'
 import { useAppLanguage } from '../hooks/useAppLanguage'
+import { compareFlagsByPriority, enrichFlagWithPriority } from '../utils/priority'
 
 function DashboardPage() {
   const navigate = useNavigate()
@@ -36,14 +37,11 @@ function DashboardPage() {
   const [isInsightLoading, setIsInsightLoading] = useState(false)
   const insightTimerRef = useRef(null)
 
-  const sortedFlags = useMemo(
-    () =>
-      [...visibleFlags].sort(
-        (flagA, flagB) =>
-          new Date(flagB.created_at).getTime() - new Date(flagA.created_at).getTime(),
-      ),
-    [visibleFlags],
-  )
+  const sortedFlags = useMemo(() => {
+    const prioritizedFlags = visibleFlags.map(enrichFlagWithPriority)
+
+    return prioritizedFlags.sort(compareFlagsByPriority)
+  }, [visibleFlags])
 
   const selectedFlag =
     sortedFlags.find((flag) => flag.flag_id === selectedFlagId) ?? sortedFlags[0] ?? null
@@ -299,6 +297,7 @@ function DashboardPage() {
             onVerify={handleVerify}
             onReject={handleReject}
             onViewAll={() => navigate('/alerts')}
+            title="Smart Priority Queue"
           />
           <DataOverviewCard analytics={analytics} />
         </div>
