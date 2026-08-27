@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { KeyRound, Leaf, Phone, UserRound } from 'lucide-react'
+import { KeyRound, Leaf, Phone, ShieldCheck, UserRound, X } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useAppLanguage } from '../hooks/useAppLanguage'
 
@@ -12,7 +12,17 @@ const profileOptions = [
 
 function LoginPage() {
   const navigate = useNavigate()
-  const { requestOtp, verifyOtp, isAuthenticated, isRequestingOtp, isVerifyingOtp } = useAuth()
+  const {
+    requestOtp,
+    verifyOtp,
+    loginDemo,
+    demoProfiles,
+    isDemoLoginEnabled,
+    isAuthenticated,
+    isRequestingOtp,
+    isVerifyingOtp,
+    isLoggingInDemo,
+  } = useAuth()
   const { t } = useAppLanguage()
 
   const [phone, setPhone] = useState('')
@@ -21,6 +31,10 @@ function LoginPage() {
   const [step, setStep] = useState(1)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [isDemoModalOpen, setIsDemoModalOpen] = useState(false)
+  const [activeDemoProfileId, setActiveDemoProfileId] = useState(null)
+  const [demoModalPosition, setDemoModalPosition] = useState({ top: 96, left: 16, width: 360, maxHeight: 420 })
+  const demoButtonRef = useRef(null)
 
   const normalizedPhone = phone.trim()
   const normalizedOtp = otp.trim()
@@ -28,8 +42,53 @@ function LoginPage() {
   const otpDigits = normalizedOtp.replace(/\D/g, '')
   const isPhoneValid = phoneDigits.length >= 10
   const isOtpValid = otpDigits.length >= 4
-  const isSubmitting = isRequestingOtp || isVerifyingOtp
+  const isSubmitting = isRequestingOtp || isVerifyingOtp || isLoggingInDemo
   const isOtpStep = step === 2
+
+  useEffect(() => {
+    if (!isDemoModalOpen) return undefined
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setIsDemoModalOpen(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleEscape)
+    return () => {
+      window.removeEventListener('keydown', handleEscape)
+    }
+  }, [isDemoModalOpen])
+
+  useEffect(() => {
+    if (!isDemoModalOpen) return undefined
+
+    const updateDemoModalPosition = () => {
+      const buttonRect = demoButtonRef.current?.getBoundingClientRect()
+
+      if (!buttonRect) return
+
+      const width = Math.min(Math.max(window.innerWidth - 24, 280), 420)
+      const top = Math.max(16, buttonRect.bottom + 10)
+      const left = Math.min(
+        window.innerWidth - width - 12,
+        Math.max(12, buttonRect.right - width),
+      )
+      const maxHeight = Math.max(220, window.innerHeight - top - 16)
+
+      setDemoModalPosition({ top, left, width, maxHeight })
+    }
+
+    updateDemoModalPosition()
+
+    window.addEventListener('resize', updateDemoModalPosition)
+    window.addEventListener('scroll', updateDemoModalPosition, true)
+
+    return () => {
+      window.removeEventListener('resize', updateDemoModalPosition)
+      window.removeEventListener('scroll', updateDemoModalPosition, true)
+    }
+  }, [isDemoModalOpen])
 
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />
@@ -90,6 +149,23 @@ function LoginPage() {
     navigate('/dashboard', { replace: true })
   }
 
+  const handleDemoLogin = async (profileId) => {
+    setError('')
+    setMessage('')
+    setIsDemoModalOpen(false)
+    setActiveDemoProfileId(profileId)
+
+    const response = await loginDemo(profileId)
+    setActiveDemoProfileId(null)
+
+    if (!response.success) {
+      setError(response.error)
+      return
+    }
+
+    navigate('/dashboard', { replace: true })
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#f7f8f4] p-4">
       <div className="w-full max-w-5xl overflow-hidden rounded-2xl border border-[#dbe4db] bg-white shadow-panel">
@@ -120,7 +196,25 @@ function LoginPage() {
             </div>
           </div>
 
-          <div className="p-8">
+          <div className="relative p-8">
+            {isDemoLoginEnabled ? (
+              <div className="absolute right-8 top-8 z-20">
+                <button
+                  ref={demoButtonRef}
+                  type="button"
+                  onClick={() => {
+                    setIsDemoModalOpen((currentValue) => !currentValue)
+                    if (error) setError('')
+                  }}
+                  disabled={isSubmitting}
+                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#6a9c8a] bg-[#195744] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#124c3a] disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  <ShieldCheck size={15} />
+                  Demo Login
+                </button>
+              </div>
+            ) : null}
+
             <h2 className="text-2xl font-semibold text-[#143126]">{t('login.title')}</h2>
             <p className="mt-1 text-sm text-[#66736c]">{t('login.subtitle')}</p>
 
@@ -136,7 +230,7 @@ function LoginPage() {
                       if (error) setError('')
                       if (isOtpStep) resetOtpFlow()
                     }}
-                    disabled={isOtpStep}
+                    disabled={isOtpStep || isLoggingInDemo}
                     className="h-11 w-full appearance-none rounded-lg border border-[#d7e0d7] bg-white pl-9 pr-3 text-sm outline-none transition focus:border-[#80bb95]"
                   >
                     {profileOptions.map((option) => (
@@ -162,7 +256,7 @@ function LoginPage() {
                     placeholder="+91-98XXXXXXXX"
                     inputMode="tel"
                     autoComplete="tel"
-                    disabled={isOtpStep}
+                    disabled={isOtpStep || isLoggingInDemo}
                     className="h-11 w-full rounded-lg border border-[#d7e0d7] pl-9 pr-3 text-sm outline-none transition focus:border-[#80bb95]"
                     required
                   />
@@ -184,6 +278,7 @@ function LoginPage() {
                       placeholder="Enter OTP"
                       inputMode="numeric"
                       autoComplete="one-time-code"
+                      disabled={isLoggingInDemo}
                       className="h-11 w-full rounded-lg border border-[#d7e0d7] pl-9 pr-3 text-sm outline-none transition focus:border-[#80bb95]"
                       required
                     />
@@ -213,7 +308,9 @@ function LoginPage() {
                   ? isVerifyingOtp
                     ? 'Verifying OTP...'
                     : t('login.verifyLogin')
-                  : isRequestingOtp
+                  : isLoggingInDemo
+                    ? 'Signing in with demo account...'
+                    : isRequestingOtp
                     ? 'Sending OTP...'
                     : t('login.sendOtp')}
               </button>
@@ -228,6 +325,10 @@ function LoginPage() {
                   {t('login.changeDetails')}
                 </button>
               ) : null}
+
+              {activeDemoProfileId ? (
+                <p className="text-xs text-[#678279]">Signing in with selected demo account...</p>
+              ) : null}
             </form>
 
             <p className="mt-4 text-xs text-[#7b8780]">
@@ -236,6 +337,62 @@ function LoginPage() {
           </div>
         </div>
       </div>
+
+      {isDemoModalOpen ? (
+        <>
+          <button
+            type="button"
+            aria-label="Close demo login"
+            onClick={() => setIsDemoModalOpen(false)}
+            className="fixed inset-0 z-[1200] bg-transparent"
+          />
+
+          <div
+            style={{
+              top: demoModalPosition.top,
+              left: demoModalPosition.left,
+              width: demoModalPosition.width,
+              maxHeight: demoModalPosition.maxHeight,
+            }}
+            className="fixed z-[1210] overflow-y-auto rounded-2xl border border-[#e3e9e3] bg-white p-3 shadow-2xl animate-[vr-pop-in_220ms_cubic-bezier(.2,.9,.2,1)]"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="inline-flex rounded-md bg-[#fff5db] px-2 py-1 text-[11px] font-semibold tracking-[0.06em] text-[#8a5f13]">
+                  DEMO ONLY
+                </p>
+                <h3 className="mt-2 text-lg font-semibold text-[#1f3128]">Choose a demo account</h3>
+                <p className="mt-1 text-sm leading-snug text-[#64746d]">
+                  For live presentations — skips credentials and OTP.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsDemoModalOpen(false)}
+                className="rounded-md p-1 text-[#6c7872] transition hover:bg-[#f5f8f6]"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-2">
+              {demoProfiles.map((profile) => (
+                <button
+                  key={profile.id}
+                  type="button"
+                  onClick={() => handleDemoLogin(profile.id)}
+                  disabled={isSubmitting}
+                  className="w-full rounded-xl border border-[#ebefeb] bg-[#fbfcfb] px-3 py-2 text-left transition hover:border-[#c8d8cf] hover:bg-[#f4f8f5] disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  <p className="text-base font-semibold text-[#2a3f35]">{profile.label}</p>
+                  <p className="mt-0.5 text-xs text-[#708078]">{profile.description}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      ) : null}
     </div>
   )
 }

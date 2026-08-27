@@ -4,9 +4,34 @@ import {
   gramSabhaAccounts,
   jurisdictionsById,
 } from '../data/seedData'
+import { ENABLE_DEMO_LOGIN } from './config'
 import { apiRequest } from './api'
 
 const DEMO_OTP_FALLBACK = '123456'
+
+const demoLoginProfiles = [
+  {
+    id: 'state_administrator',
+    label: 'State Administrator',
+    description: 'State-wide demo access (OTP skipped).',
+    phone: '+91-9800000001',
+    role: 'admin',
+  },
+  {
+    id: 'district_officer',
+    label: 'District Officer',
+    description: 'District-level demo access (OTP skipped).',
+    phone: '+91-9800000011',
+    role: 'district_officer',
+  },
+  {
+    id: 'gram_sabha_officer',
+    label: 'Gram Sabha Officer',
+    description: 'Jurisdiction-scoped demo access (OTP skipped).',
+    phone: '+91-9800000002',
+    role: 'gram_sabha',
+  },
+]
 
 function normalizeRole(role) {
   if (!role) return 'gram_sabha'
@@ -384,4 +409,51 @@ export async function verifyOtpForPhone({ phone, otp, role }) {
 
 export async function loginWithPhone({ phone, role, otp }) {
   return verifyOtpForPhone({ phone, role, otp: otp ?? '' })
+}
+
+export function getDemoLoginProfiles() {
+  if (!ENABLE_DEMO_LOGIN) return []
+
+  return demoLoginProfiles.map(({ id, label, description }) => ({
+    id,
+    label,
+    description,
+  }))
+}
+
+export async function loginWithDemoProfile(profileId) {
+  if (!ENABLE_DEMO_LOGIN) {
+    return {
+      success: false,
+      error: 'Demo login is disabled in this environment.',
+    }
+  }
+
+  const selectedProfile = demoLoginProfiles.find((profile) => profile.id === profileId)
+
+  if (!selectedProfile) {
+    return {
+      success: false,
+      error: 'Selected demo profile is unavailable.',
+    }
+  }
+
+  const session = buildSessionFromSeed(selectedProfile.phone, selectedProfile.role)
+
+  if (!session) {
+    return {
+      success: false,
+      error: 'Configured demo profile is not mapped to a valid account.',
+    }
+  }
+
+  return {
+    success: true,
+    session,
+    profile: {
+      id: selectedProfile.id,
+      label: selectedProfile.label,
+      description: selectedProfile.description,
+    },
+  }
 }

@@ -1,5 +1,10 @@
 import { createContext, useContext, useMemo, useState } from 'react'
-import { requestOtpForPhone, verifyOtpForPhone } from '../services/auth'
+import {
+  getDemoLoginProfiles,
+  loginWithDemoProfile,
+  requestOtpForPhone,
+  verifyOtpForPhone,
+} from '../services/auth'
 
 const AUTH_STORAGE_KEY = 'vanraksha_auth_session'
 
@@ -28,6 +33,9 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(getStoredSession)
   const [isRequestingOtp, setIsRequestingOtp] = useState(false)
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false)
+  const [isLoggingInDemo, setIsLoggingInDemo] = useState(false)
+
+  const demoProfiles = useMemo(() => getDemoLoginProfiles(), [])
 
   const requestOtp = async (payload) => {
     setIsRequestingOtp(true)
@@ -54,6 +62,21 @@ export function AuthProvider({ children }) {
 
   const login = verifyOtp
 
+  const loginDemo = async (profileId) => {
+    setIsLoggingInDemo(true)
+    const result = await loginWithDemoProfile(profileId)
+    setIsLoggingInDemo(false)
+
+    if (!result.success) {
+      return result
+    }
+
+    setSession(result.session)
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(result.session))
+
+    return result
+  }
+
   const logout = () => {
     setSession(null)
     localStorage.removeItem(AUTH_STORAGE_KEY)
@@ -65,13 +88,17 @@ export function AuthProvider({ children }) {
       requestOtp,
       verifyOtp,
       login,
+      loginDemo,
       logout,
+      demoProfiles,
+      isDemoLoginEnabled: demoProfiles.length > 0,
       isAuthenticated: Boolean(session?.access_token),
       isRequestingOtp,
       isVerifyingOtp,
-      isLoggingIn: isVerifyingOtp,
+      isLoggingInDemo,
+      isLoggingIn: isVerifyingOtp || isLoggingInDemo,
     }),
-    [session, isRequestingOtp, isVerifyingOtp],
+    [session, isRequestingOtp, isVerifyingOtp, isLoggingInDemo, demoProfiles, login],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
